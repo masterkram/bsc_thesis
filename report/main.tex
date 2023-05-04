@@ -40,7 +40,7 @@
 
 \begin{abstract}
 \section*{Abstract}
-In this study we present \textbf{SatToRad} a sequence to sequence machine learning model capable of predicting radar reflectivity for lead times of 15, 30, 45, 60, 90 and 180 minutes.
+The forecasting of rain is a complex problem with centuries of scientific work. The implications of weather for individuals and companies continue to be important. Machine Learning approaches have been shown to outperform state of the art physics based models of weather for short term predictions. We introduce a new type of model \textbf{Sat2Rad}. Our model takes as input multi-spectral satellite data and outputs radar reflectivity at a set of time-steps ranging from 15 to 180 minutes in the future.
 \end{abstract}
 
 \keywords{Machine Learning, Sequence to Sequence, Radar, Satellite, Storms, Forecasting}
@@ -56,7 +56,7 @@ In this study we present \textbf{SatToRad} a sequence to sequence machine learni
 
 \maketitle
 
-\section{Introduction}
+\section{Introduction} \label{introduction}
 
 Precipitation forecasting is essential to reduce the risk of life threatening situations. Different types of rainfall ranging from mist to heavy rain have a major impact for different societal sectors including agriculture, aviation, outdoor events, and the energy industry.
 By having timely and accurate predictions of rainfall which in turn indicate the potential for destructive storms we can prevent injuries, assist companies in predicting energy production and use resources efficiently.
@@ -76,7 +76,7 @@ At present meteorologists are able to successfully predict many instances of pre
 \medskip
 
 % explain machine learning approaches
-Machine Learning (\textsc{ML}) approaches have also been developed to predict precipitation. An improvement of machine learning models over \textsc{NWP} models is that they are much faster to produce predictions, thus ML models are more suitable for real-time or near-real-time predictions, such as required in disaster response and energy management. According to the universal approximation theorem \cite{cybenko-1989}, deep neural networks have the property of being able to approximate any function provided they have the correct weights, as such it is suggested that machine learning models can incorporate sources of predictability beyond optical flow such as the cell-lifecycle among others \cite{prudden2020review}.
+Machine Learning (\textsc{ML}) approaches have also been developed to predict precipitation. An improvement of machine learning models over \textsc{NWP} models is that they are much faster to produce predictions, thus ML models are more suitable for real-time or near-real-time predictions, such as required in disaster response and energy management. According to the universal approximation theorem \cite{cybenko-1989}, deep neural networks have the property of being able to approximate any function provided they have the correct weights, thus it is suggested that machine learning models can incorporate sources of predictability beyond optical flow such as the cell-lifecycle among others \cite{prudden2020review}.
 \medskip
 
 % explain our approach
@@ -85,7 +85,7 @@ Thus far most machine learning approaches for precipitation nowcasting have focu
 
 % "Yet the key issue of precipitation prediction – the anticipation of convective initialization, as well as the growth and dissipation of precipitation in the imminent future – still appears to be unresolved" 
 
-We propose to use multi-spectral satellite data to learn spatio-temporal mappings between sequences of satellite data and precipitation data. If this is successful cumulonimbus clouds could be predicted from when they are mere cumulus clouds and prior. An additional advantage is that satellite data as opposed to radar data is readily available over oceans and remote communities which allows for the prediction of precipitation over these regions. We will work towards creating a model by answering the following main research question:
+We propose to use multi-spectral satellite data to learn spatio-temporal mappings between sequences of satellite data and precipitation data. If this is successful \textit{cumulonimbus} clouds could be predicted from when they are mere \textit{cumulus} clouds and prior. An additional advantage is that satellite data as opposed to radar data is readily available over oceans and remote communities which allows for the prediction of precipitation over these regions. We will work towards creating a model by answering the following main research question:
 \smallskip
 
 % Most physical models are based on the extrapolation of the detected Cbs with atmospheric motion vectors (AMV; see [14] and the references therein). This approach works well as long as the cells do not decay during the prediction period. Unfortunately, cells usually do decay after a certain lifetime, such that this effect occurs regularly. Further, newly developed cells cannot be captured by extrapolation of detected cells. These are serious drawbacks of the AMV approach. The quite good results achieved with deep learning indicate that the training process might enable the network to gain information on the life cycles of cells (decay, newly developed cells). The network seems to be able to learn to a certain extent whether Cbs decay or newly develop within the prediction period or not, and we believe this is crucial for lead times around or larger than 180 min, as the lifetime of regular Cbs is usually shorter than this; see, e.g., 
@@ -109,187 +109,119 @@ This research question will be answered by looking at the following sub research
 \end{enumerate}
 
 \section{Main Contribution}
-This proposal has the potential to contribute a model capable of predicting precipitation in the near future.
+This proposal has the potential to contribute a deep learning model capable of predicting precipitation in the short term with only satellite images.
 
 \section{Related Works}
 
-In this section we will discuss the existing work in precipitation nowcasting via machine learning. This section is structured by the type of input data used in the approaches first we list radar based learning and then we discuss satellite based approaches.
+In this section we will discuss the existing work in precipitation nowcasting via machine learning. This section is structured by the type of input data used in the approaches, first we list radar based learning and then we discuss satellite based approaches.
 
 \subsection{Radar Based Nowcasting}
 
-Recurrent neural networks (\textsc{RNNs}) have been created to learn temporal relationships in data, therefore they are a natural candidate to the task of learning spatio-temporal patterns of weather. The \textsc{LSTM} architecture was developed by Hochreiter and Schmidhuber \cite{lstm}, to solve the problem of vanishing and exploding gradients in RNNs and is widely used. Taking LSTM as a base and adapting the weights to kernels, \textsc{ConvLSTM} \cite{convlstm} was introduced in 2015 for the task of precipitation forecasting. Multiple layers of ConvLSTM are used in this paper to obtain a sequence to sequence architecture. A further improvement of ConvLSTM is \textsc{trajGRU} which was proposed by Shi et al. \cite{shi2017deep} to be able to learn \textit{location-variant} structure for recurrent connections.
+Recurrent neural networks (\textsc{RNNs}) have been created to learn temporal relationships in data, therefore they are a natural candidate to the task of learning spatio-temporal patterns of weather. The \textsc{LSTM} architecture was developed by Hochreiter and Schmidhuber \cite{lstm}, to solve the problem of vanishing and exploding gradients in RNNs and is widely used. Taking LSTM as a base and adapting the weights to kernels, \textsc{ConvLSTM} \cite{convlstm} was introduced for the task of precipitation nowcasting. Multiple layers of ConvLSTM are used in this paper to obtain a sequence to sequence architecture. A further improvement of ConvLSTM is \textsc{trajGRU} which was proposed by Shi et al. \cite{shi2017deep} to be able to learn the \textit{location-variant} structure for recurrent connections.
 \medskip
 
-Simple convolutional neural networks have also been used to predict precipitation. As demonstrated by Bai et al. and Gering et al. \cite{bai2018empirical, gehring2017convolutional} convolutional neural architectures can outperform recurrent neural networks for a variety of sequence modelling tasks. This is the reason why many works on precipitation nowcasting have used pure convolutional networks \cite{rainet,agrawal2019machine}
+Pure convolutional neural networks have also been used to predict precipitation. As demonstrated by Bai et al. and Gering et al. \cite{bai2018empirical, gehring2017convolutional} convolutional neural architectures can outperform recurrent neural networks for a variety of sequence modelling tasks. This is the reason why many works on precipitation nowcasting have opted for pure convolutional networks \cite{rainet,agrawal2019machine}.
 \medskip
 
-Due to machine learning models attempting to minimize loss, blurry predictions can be produced by models. This can be alleviated by using generative models which sample from the possible futures. Generative models have been succesfully applied to the task of precipitation nowcasting \cite{}.
-
-% Instead of treating the problem as a spatio temporal problem others have treated the problem as a image translation problem. using UNEt
-% One possible approach to forecast precipitation is through the use of convolutional neural networks such as U-NET proposed by Ronneberger et al. for image segmentation \cite{ronneberger2015unet}
-
-\begin{enumerate}
-    \item convolutional neural networks
-    \item recurrent neural networks
-    \item generative adverserial networks
-    \item variational autoencoders
-\end{enumerate}
+Due to machine learning models attempting to minimize loss, \textit{blurry predictions} can be produced by models. This can be alleviated by using generative models which sample from the possible futures and do not seek to provide a best average fit. Generative Adversarial Networks have been successfully applied to the task of precipitation nowcasting \cite{Ravuri_2021}.
 
 \subsection{Satellite Based Nowcasting}
 
-\begin{enumerate}
-    \item multi layer perceptron
-    \item convolutional neural networks (u-net)
-\end{enumerate}
+In their study Chen et al. built a \cite{precipitationEstimationFromSat} MLP to forecast radar data from satellite data. The researchers used a combination of low earth orbit satellite passive microwave and infrared channels from two different satellites. Their model is developed to predict up to 1.5 hours in the future by recursive predictions of the model.
+\medskip
 
-% In their 2019 paper a Multi Layer Perceptron network was used to estimate precipitation data via satellite channels. \cite{precipitationEstimationFromSat}
+A study that does not predict precipitation but uses lightning as a marker for extreme precipitation was performed by Brodehl et al. \cite{predictionLightning} this study uses a convolutional network to predict lightning events, and contributes the important observation that both the visual and infrared channels are significant in differing ways to predict lightning.
+\medskip
 
-% In the blog post \cite{wirth-2022} a U-Net network was used to predict precipitation data based on satellite data.
-
-% In both of these approaches only data provenant from the infrared channels was used.
-
-% A related approach is that of \cite{predictionLightning}
-% which does not predict precipitation directly but uses lightning as a marker for storms. This paper uses a U-Net architecture to predict triangulated lightning events from satellite images. This paper provides the contribution that they observed in their model that both the visual channels and the infrared channels of the satellite provide sources of predicatability and can both be leveraged to produce good predictions.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% To read a comprehensive literature review of the available work in radar nowcasting see \cite{prudden2020review}. 
-
-% Since in our approach we Problem can be approached as a video prediction problem. It is more suitable to approximate the problem to an sequence to sequence learning problem, where sequences from the domain of satellite images in the past need to be converted into the the domain of radar data.
-
-% The first paper to forecast precipitation via machine learning was \cite{}. Convolutional LSTM a machine was proposed for the application of solving the precipitation nowcasting problem in 2015.
-
-% study \cite{nhess-22-577-2022} measured the importance of features for thunderstorm prediction, it found that satellite was the strongest feature, they suggest that satellite images are also valuable and can offer a good alternative for places with missing satellite data, like over oceans and less developed areas.
-
-% Additionally data driven methods have been used to predict precipitation. Additionally various foundation models have been presented to be fine-tuned to solve meteorological tasks \cite{nguyen2023climax, bi2022panguweather}.
+The approach taken by the researchers of MetNet \cite{sønderby2020metnet} is to combine a convolutional block for spatial downsampling, then a ConvLSTM block for temporal encoding and finally a Axial attention block \cite{vaswani2017attention}. MetNet is able to perform more accurate forcasts than NWP models for up to 8 hours. In this study the input data that is used is both satellite and radar data as well as the elevation, time of the year and latitude and longitude values.
 
 \section{Background}
 In order to understand this research it is important to be acquainted with the machine learning techniques that will be used. Furthermore insight into this study can be enhanced by having more in depth information on the used data-sets and the meteorological theory.
+\medskip
 
-MLP
-Convolutional Neural Networks
-RNNs
-Sequence to sequence models
+For the machine learning aspect of this research it is important to understand multi layer perceptrons (\textsc{MLPs}) \cite{schmidhuber2022annotated}. Furthermore it is important to understand convoutional neural networks and what benefits they afford in relation to \textsc{MLPs} \cite{oshea2015introduction}. It is also crucial to have an understanding of recurrent neural networks (RNNs) and their extension to include convolutions \cite{convlstm}.
+\medskip
 
-Serviri paper
-Satellite paper
-Cumulonimbus paper
+To have an understanding of the meterological context of this project it is recommended to have an understanding of radar data \cite{rinehart1991radar}, satellite data specifically the kind used in this project \cite{schmid-no-date}.
 
 \section{Methods}
 
 % Can also be a new way to solve the problem or a hybrid method (mixed strategy, etc..). In this case, it would be nice to see a description of the steps which are followed in order to solve the problem.
 
-In this section we will discuss how we will approach the problem of precipitation nowcasting. As previously mentioned we will focus on the prediction of radar reflectivity by using satellite data. Radar reflectivity can be converted to precipitation (in mm per hour) by using the Marshall-Palmer formula.
+In this section we will discuss how we will approach the answering of our research questions.
+\medskip
 
-$$R = (\frac{10^{dbZ/10}}{200})^{\frac{5}{8}}$$
+In our first and second sub-research questions we will perform a more comprehensive literature review to elicit the necessary methods that are required to create and evaluate the  model for example: suitable loss functions from superzoom studies, metrics which are suitable for meterological applications and methods to perform evalutations. These insights will be necessary to the work in sub-research questions 3 and 4.
+\medskip
 
-Practically we will perform this with the following methods:
-\begin{enumerate}
-    \item Data Preprocessing
-    \item Model Training
-    \item Model Evaluation
-\end{enumerate}
+To answer our third sub-research question, we foresee to create a baseline model with a Convolutional LSTM architecture, if this succeeds we will expand this network by adding convolutions for spatial downsampling and axial attention in order to improve the accuracy of our model as done in \cite{sønderby2020metnet}.
+\medskip
 
-\subsection{Data Preprocessing}
-The obtained satellite images are in \textit{Geostationary} projection, and provide a view of Eurasia and Africa. We will process this data by reprojecting the data into \textit{Mercator} projection. Furthermore we will zoom in to match the area captured in the radar images. Both of these steps will be performed by using the \texttt{satpy} package \cite{}.
-
-Then satellite channels of the same timestamp will be aggregated into the channels dimension of the tensor.
-
-Last dimension of the tensor will be the satellite channels instead of normal rgb.
-
-\texttt{(timesteps, h, w, channels)}
-
-output will be of shape \texttt{(timesteps, h, w)}
-
-\subsection{Model Training}
-
-\subsection{Model Evaluation}
-Expert based evaluation and month study.
+To answer the final sub-research question, we will evaluate the model to identify the suitability of our trained model in different meteorological situations.
 
 \section{Expected Results}
 
 \subsection{Data}
 
-We have obtained a multi-year structured archive of radar composites with a temporal resolution of 5 minutes. These radar composites are made from 5 Doppler radars that provide a good coverage of the Benelux area, these radars are located at these points and can be visualized in figure \ref{}
-\begin{itemize}
-    \item \textsc{Den Helder}
-    \item \textsc{Herwijnen}
-    \item \textsc{Essen}
-    \item \textsc{Borkum}
-    \item \textsc{Neuheilenbach}
-\end{itemize}
+\subsubsection{Dataset Details}
 
+We have obtained a multi-year structured archive of radar composites with a temporal resolution of 5 minutes. These radar composites are made from 5 Doppler radars that provide a good coverage of the Benelux area (See figure \ref{fig:source}). The readings of these radars can be combined to produce radar reflectivity data (see figure \ref{fig:reflect}).
+\medskip
 
-Additionally we have obtained satellite data from \textsc{EUMETSAT} at a 3x3km spatial resoulution and 15 minute temporal resolution. This data has been captured with the \textsc{SEVIRI} sensor, which produces multichannel satellite imagery.
+Additionally we have obtained satellite data from \textsc{EUMETSAT} at a \texttt{3x3km} spatial resolution and 15 minute temporal resolution. This data has been captured with the \textsc{SEVIRI} sensor \cite{schmid-no-date}, which produces multi-spectral satellite imagery (See figures \ref{fig:vis} and \ref{fig:infra}).
 
-\begin{figure}
-    \centering
-    \includegraphics[width=225]{report/images/radar_reflectivity.png}
-    \caption{Radar Reflectivity}
-    \label{fig:my_label}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=225]{report/images/vis_006.png}
-    \caption{Satellite Image: Visible Channel 18UTC 0.6\mu m}
-    \label{fig:my_label}
-\end{figure}
-
-\begin{figure}
+\begin{figure}[]
     \centering
     \includegraphics[width=225]{report/images/infrared.png}
     \caption{Satellite Image: Infrared Channel 18UTC 12.0\mu m}
-    \label{fig:my_label}
+    \label{fig:infra}
 \end{figure}
+
+\subsubsection{Data Cleaning} \textit{UMAP} \cite{mcinnes2020umap} will be used to cluster the data from the satellite and radar to find outliers and potential data imbalances.
+
+\subsubsection{Preprocessing Details} Several options exist for preprocessing of the data. One could reproject the satellite images to match the area and geographic projection of the radar images, however this requires heavy computation and studies such as \cite{sønderby2020metnet} have shown the importance of the context (i.e data from outside the region of interest) for the predictions, therefore we will first experiment with leaving the data in the current projection. We will standardize the pixel data to floating point data between \texttt{0} and \textt{1}.
 
 \subsection{Implementation Details}
 
+We plan to work with \texttt{pytorch} due to the higher degree of availability of open-source model implementations that we can use as a base for our work, for instance this repository: \cite{openclimatefix-no-date}.
+
 \subsection{Metrics}
+We plan to use the following metrics to evaluate our model:
 
-\begin{enumerate}
-    \item MSE
-    \item MAE
-    \item RMSE
-    \item B-MSE
-    \item B-MAE
-    \item CSI
-\end{enumerate}
+\begin{equation}
+MSE = \frac{\sum (\hat{y_i} -y_i)^2}{n}
+\end{equation}
 
-exteded to perceptual and other content losses originating from superzoom studies.
+\begin{equation}
+MAE = \frac{\sum |\hat{y_i} -y_i|}{n}
+\end{equation}
+
+\begin{equation}
+RMSE = \sqrt{\frac{\sum (\hat{y_i} -y_i)^2}{n}}
+\end{equation}
+
+Additional metrics come from the study \cite{shi2017deep}, where the authors created \textit{B-MSE} and \textit{B-MAE} due to the fact that the frequencies of different rainfall levels are imbalanced. Models trained with conventional \textit{MSE} or \textit{MAE} are biased towards predicting low amounts of precipitation. This can be solved with a loss function that weights the higher precipitation more strongly. The weighting function \textit{w} can be found in the study as well.
+
+\begin{equation}
+BMSE = \frac{\sum w(\hat{y_i}) \cdot (\hat{y_i} -y_i)^2}{n}
+\end{equation}
+
+\begin{equation}
+BMAE = \frac{\sum w(\hat{y_i})  \cdot (\hat{y_i} -y_i)^2}{n}
+\end{equation}
 
 \subsection{Experiments}
 
+The input and output data will be the full data as discussed in the data section, and will not change based on the experiments, since we know from literature that all the data from satellite channels can be useful.
+
+\begin{enumerate}
+    \item Use ConvLSTM architecture.
+    \item Use MetNet architecture
+    \item Evaluate the best performing model by running it over a month of data, and analyse the performance by performing aggregations of the predicted data and the ground truth.
+\end{enumerate}
 
 \section{Time Planning}
-In this section we discuss our planning for the execution of the study in this proposal. In figure \ref{}
+In this section we discuss our planning for the execution of the study in this proposal. In the \textit{gantt} chart you can see that we begin by getting a go for the proposal. Then we start by answering sub-research question 1 and 2 then we proceed by answering sub-research question 3 and finally we bring the research to a close with sub-research question 4.
 
 \medskip
 
@@ -304,48 +236,56 @@ milestone/.append style={fill=yellow!50, rounded corners=3pt}]{1}{11}
   \ganttmilestone{Draft Proposal}{2} \\
   \ganttmilestone{Final Proposal}{3} \\
   \ganttbar{Writing}{3}{10} \\
-  % \ganttlinkedbar{Task 2}{3}{8} \ganttnewline
-  % \ganttbar{Final Task}{8}{12} \\
   \ganttmilestone{Draft Paper}{9} \\
   \ganttmilestone{Final Paper}{10} \\
   \ganttbar{Presentation}{11}{11} \\
+  \ganttbar{subRQ1-2}{3}{3} \\
+  \ganttbar{subRQ3}{4}{8} \\
+  \ganttbar{subRQ4}{8}{9} \\
+  \ganttlink{elem8}{elem9}
+  \ganttlink{elem9}{elem10}
   \ganttlink{elem1}{elem4}
-  \ganttgroup{Experiments}{1}{11} \\
-  \ganttbar{Experiment 1}{2}{4} \\
 \end{ganttchart}
 
 
 \section{Conclusions}
+At this point in the research we have created an \hyperref[introduction]{introduction for the research}. We have also performed a literature review of available work in the field of precipitation nowcasting. We have written the methods that we will use to perform the research and listed expected results. And we have visualized some of the data from our dataset.
 
-
-
-\begin{acks}
-Infoplaza B.V
-\end{acks}
+% \begin{acks}
+% I would like to thank my supervisor from the university of twente Elena Mocanu, for her help in writing the paper. Furthermore I would like to thank I would like to thank Dina Lazorkeno for proofreading my thesis.
+% \end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{ref}
 
+\newpage
 \appendix
 %Appendix A
-\section{Headings in Appendices}
-The rules about hierarchical headings discussed above for the body
-of the article are different in the appendices. In the
-\textbf{appendix} environment, the command \textbf{section} is
-used to indicate the start of each Appendix, with alphabetic order
-designation (i.e. the first is A, the second B, etc.) and a title
-(if you include one). So, if you need hierarchical structure
-\textit{within} an Appendix, start with \textbf{subsection} as the
-highest level. Here is an outline of the body of this document in
-Appendix-appropriate form:
-\subsection{Appendix A.1}
-Sample text.
-\subsection{Appendix A.2}
-Sample text.
-\subsubsection{Appendix A.2.1}
-Sample text.
+\section{Appendix}
 
-\begin{table}[]
+\begin{figure}
+    \centering
+    \includegraphics[width=225]{report/images/radar_reflectivity.png}
+    \caption{Radar Reflectivity}
+    \label{fig:reflect}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=225]{report/images/vis_006.png}
+    \caption{Satellite Image: Visible Channel 18UTC 0.6\mu m}
+    \label{fig:vis}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=225]{report/images/radar_source.png}
+    \caption{Satellite Image: Infrared Channel 18UTC 12.0\mu m}
+    \label{fig:source}
+\end{figure}
+
+
+\begin{table}[h]
 \caption{Reflectivity in dBZ versus Rainrate}
 \begin{tabular}{@{}llll@{}}
 \toprule
@@ -366,16 +306,6 @@ LZ(dBZ) & R(mm/h) & R(in/h)        & Intensity             \\ \midrule
 \end{tabular}
 \end{table}
 
-\paragraph{Inline (In-text) Equations}
-% This next section command marks the start of
-% Appendix B, and does not continue the present hierarchy
-\section{Appendix B}
-Sample text.
-%\balancecolumns % GM June 2007
-% That's all folks!
 
 
 \end{document}
-\endinput
-%%
-%% End of file `sample-authordraft.tex'.
