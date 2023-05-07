@@ -1,6 +1,7 @@
 # Satellite to Radar Nowcasting ⛈️
 
 [![Python 3.10](https://img.shields.io/badge/python-3.10-brightgreen.svg)](#satellite-to-radar-nowcasting-⛈️)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 This repo contains source files for the bachelor thesis titled:
 

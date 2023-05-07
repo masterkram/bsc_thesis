@@ -8,7 +8,7 @@ docker_settings = DockerSettings(
 
 
 @pipeline(settings={"docker": docker_settings})
-def mnist_pipeline(importer, trainer, evaluator):
+def conv_lstm_pipeline(importer, trainer, evaluator):
     train_dataloader, test_dataloader = importer()
     model = trainer(train_dataloader)
     evaluator(test_dataloader=test_dataloader, model=model)
