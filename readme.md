@@ -24,3 +24,18 @@ This repo contains source files for the bachelor thesis titled:
 │  └── main.tex
 └── sandbox
 ```
+
+## Installation
+
+```bash
+cd satellite-to-radar-nowcasting
+pip install -r requirements.txt
+```
+
+## Running
+
+```bash
+zenml connect --url=https://zenml.infoplaza.com --username=mbruderer
+zenml stack set infoplaza-local-training
+python ml_variants/mnist/pipelines/training/run_pipeline.py
+```

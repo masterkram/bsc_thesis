@@ -1,0 +1,5 @@
+{
+  "mlflow": {
+      "experiment_name": "mnist_pytorch_test"
+  }
+}
