@@ -74,3 +74,4 @@ torchviz
 torchvison
 tqdm
 mlflow
+lightning
