@@ -96,13 +96,12 @@ class ConvLSTMCell(nn.Module):
 
         return h_cur, c_cur
 
-    def init_hidden(self, batch_size, cuda=True, device="cuda"):
+    def init_hidden(self, batch_size, device="cuda"):
         state = (
             torch.zeros(batch_size, self.hidden_dim, self.height, self.width),
             torch.zeros(batch_size, self.hidden_dim, self.height, self.width),
         )
-        if cuda:
-            state = (state[0].to(device), state[1].to(device))
+        state = (state[0].to(device), state[1].to(device))
         return state
 
     def reset_parameters(self):
@@ -221,10 +220,10 @@ class ConvLSTM(nn.Module):
         for c in self.cell_list:
             c.reset_parameters()
 
-    def get_init_states(self, batch_size, cuda=True, device="cuda"):
+    def get_init_states(self, batch_size, device="cuda"):
         init_states = []
         for i in range(self.num_layers):
-            init_states.append(self.cell_list[i].init_hidden(batch_size, cuda, device))
+            init_states.append(self.cell_list[i].init_hidden(batch_size, device))
         return init_states
 
     @staticmethod
@@ -252,11 +251,10 @@ if __name__ == "__main__":
     lstm_dims = [64, 64, 64]
     teacher_forcing = True
     num_layers = 3
-    print("hi mark")
 
     encoder = ConvLSTM(
         input_size=(16, 16),
-        input_dim=64,
+        input_dim=4,
         hidden_dim=[64],
         kernel_size=(3, 3),
         num_layers=1,
@@ -269,16 +267,18 @@ if __name__ == "__main__":
     conv = nn.Conv2d(64, 1, 2)
 
     # batch size, block size, channels, h x w
-    x = torch.randn((32, 3, 64, 16, 16))
+    x = torch.randn((32, 3, 4, 16, 16))
     # x = torch.randn((b_size, num_layers, hidden_dim, hidden_spt, hidden_spt))
 
-    print(x)
+    # print(x)
 
     yhat = encoder.forward(
         x, hidden_state=encoder.get_init_states(batch_size=b_size, cuda=False)
     )
 
     output = yhat[0][:, -1, :]  # torch.Size([32, 3, 64, 16, 16])
+
+    print(output.size())
 
     result = conv(output[0])
 

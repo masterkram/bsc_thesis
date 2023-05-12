@@ -10,6 +10,15 @@ from h5py import File
 import os
 import numpy as np
 import io
+from pyresample import geometry
+
+netherlands_extent = geometry.AreaDefinition.from_extent(
+    "netherlands",
+    projection="+proj=geos h=35785831.0",
+    area_extent=(-569000.0, -5569000.0, 9569000.0, 9669000.0),
+    shape=(250, 250),
+    units="m",
+)
 
 
 class Sat2RadPreprocessor:
@@ -30,7 +39,9 @@ class Sat2RadPreprocessor:
         path = os.path.join(self.base_path, "satellite", path)
         scn = Scene(reader="seviri_l1b_native", filenames=[path])
         scn.load(channels)
-        loaded_channels = [scn[x].values for x in channels]
+        local_scn = scn.resample(netherlands_extent)
+        # scn.crop(ll_bbox=(-105.0, 40.0, -95.0, 50.0))
+        loaded_channels = [local_scn[x].values for x in channels]
         return np.array(loaded_channels)
 
     def preprocess(self):
@@ -65,11 +76,11 @@ class Sat2RadPreprocessor:
 
 @step
 def preprocessor() -> None:
-    pr = Sat2RadPreprocessor(base_path="../../../../../data")
+    pr = Sat2RadPreprocessor(base_path="../../../../data")
     pr.preprocess()
 
 
 if __name__ == "__main__":
-    pr = Sat2RadPreprocessor(base_path="../../../../../data")
+    pr = Sat2RadPreprocessor(base_path="../../../../data/")
 
     pr.preprocess()

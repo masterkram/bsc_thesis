@@ -7,6 +7,7 @@ from zenml.steps import Output, step
 import lightning.pytorch as pl
 from satpy import Scene
 import numpy as np
+import os
 
 
 # class Sat2RadDataset(torch.utils.data.Dataset):
@@ -40,6 +41,9 @@ import numpy as np
 
 
 class Sat2RadDataset(datasets.VisionDataset):
+    def __init__(self, root, transforms):
+        super().__init__(root, transform=transforms)
+
     def __len__(self):
         "Denotes the total number of samples"
         return 1
@@ -47,13 +51,20 @@ class Sat2RadDataset(datasets.VisionDataset):
     def __getitem__(self, index):
         "Generates one sample of data"
         radar = np.load(
-            "../../../../../data/preprocessed/radar/radar_nl_202304211800.npy"
+            os.path.join(
+                self.root, "preprocessed", "radar", "radar_nl_202304211800.npy"
+            )
         )
         satellite = np.load(
-            "../../../../..//data/preprocessed/satellite/MSG3-SEVI-MSG15-0100-NA-20230421181241.751000000Z-NA.nat.npy"
+            os.path.join(
+                self.root,
+                "preprocessed",
+                "satellite",
+                "MSG3-SEVI-MSG15-0100-NA-20230421181241.751000000Z-NA.npy",
+            )
         )
 
-        satellite = np.reshape(satellite, (1, 4, 3712, 3712))
+        satellite = np.reshape(satellite, (1, 4, 250, 250))
 
         X = torch.from_numpy(satellite)
         y = torch.from_numpy(radar)
@@ -81,9 +92,7 @@ class Sat2RadDataModule(pl.LightningDataModule):
         pass
 
     def setup(self, stage: str):
-        self.train = Sat2RadDataset(
-            self.data_dir, train=True, transforms=self.transform
-        )
+        self.train = Sat2RadDataset(self.data_dir, transforms=self.transform)
         # mnist_full = datasets.MNIST(self.data_dir, train=True, transform=self.transform)
         # self.mnist_train, self.mnist_val = random_split(mnist_full, [55000, 5000])
         # self.mnist_test = datasets.MNIST(
@@ -107,32 +116,34 @@ class Sat2RadDataModule(pl.LightningDataModule):
 
 
 @step
-def importer_mnist() -> (
+def importer_sat2rad() -> (
     Output(
         train_dataloader=DataLoader,
         test_dataloader=DataLoader,
+        predict_dataloader=DataLoader,
     )
 ):
-    data_module = Sat2RadDataModule(data_dir="../../../../../data", batch_size=32)
+    data_module = Sat2RadDataModule(data_dir="../../../../data", batch_size=1)
     data_module.prepare_data()
     data_module.setup(None)
     return (
-        data_module.train_dataloader,
-        data_module.test_dataloader,
-        data_module.predict_dataloader,
+        data_module.train_dataloader(),
+        data_module.test_dataloader(),
+        data_module.predict_dataloader(),
     )
 
 
 if __name__ == "__main__":
     radar = np.load("../../../../../data/preprocessed/radar/radar_nl_202304211800.npy")
     satellite = np.load(
-        "../../../../..//data/preprocessed/satellite/MSG3-SEVI-MSG15-0100-NA-20230421181241.751000000Z-NA.nat.npy"
+        "../../../../..//data/preprocessed/satellite/MSG3-SEVI-MSG15-0100-NA-20230421181241.751000000Z-NA.npy"
     )
-
-    satellite = np.reshape(satellite, (1, 4, 3712, 3712))
 
     X = torch.from_numpy(satellite)
     y = torch.from_numpy(radar)
 
     print(X.size())
     print(y.size())
+
+    # torch.Size([4, 250, 250])
+    # torch.Size([1660, 1340])
