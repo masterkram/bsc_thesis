@@ -1,125 +1,148 @@
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-import torch
-from enum import Enum
 from zenml.steps import Output, step
-import lightning.pytorch as pl
 from satpy import Scene
 from h5py import File
 import os
 import numpy as np
-import io
-from pyresample import geometry
-import boto3
-import botocore
-from botocore import UNSIGNED
-from botocore.client import Config
+from pyresample.geometry import create_area_def
 import datetime
+from BucketService import BucketService
+from functools import cmp_to_key
+from parse_time import parseTime
+import zipfile
 
-netherlands_extent = geometry.AreaDefinition.from_extent(
-    "netherlands",
-    projection="+proj=geos h=35785831.0",
-    area_extent=(-569000.0, -5569000.0, 9569000.0, 9669000.0),
-    shape=(250, 250),
-    units="m",
+
+READER = "seviri_l1b_native"
+PROJECTION = "+proj=merc +lat_0=52.5 +lon_0=5.5 +ellps=WGS84"
+SAT_CHANNELS = ["VIS006", "VIS008", "IR_120", "IR_134"]
+custom_area = create_area_def(
+    "my_area",
+    PROJECTION,
+    width=300,
+    height=300,
+    area_extent=[0, 50, 10, 55],
+    units="degrees",
 )
+PATH_TO_DATA = "../../../../data"
 
 
-class Sat2RadPreprocessor:
-    def __init__(self, base_path: str = "./data"):
-        self.base_path = base_path
-
-    def load_files(self) -> tuple[list, list]:
-        self.radar_files = os.listdir(os.path.join(self.base_path, "radar"))
-        self.satellite_files = os.listdir(os.path.join(self.base_path, "satellite"))
-
-    def preprocess_radar_file(self, path):
-        path = os.path.join(self.base_path, "radar", path)
-        radarFile = File(path)
-        return np.array(radarFile["reflectivity"])
-
-    def preprocess_satellite_file(self, path):
-        channels = ["VIS006", "VIS008", "IR_120", "IR_134"]
-        path = os.path.join(self.base_path, "satellite", path)
-        scn = Scene(reader="seviri_l1b_native", filenames=[path])
-        scn.load(channels)
-        local_scn = scn.resample(netherlands_extent)
-        # scn.crop(ll_bbox=(-105.0, 40.0, -95.0, 50.0))
-        loaded_channels = [local_scn[x].values for x in channels]
-        return np.array(loaded_channels)
-
-    def preprocess(self):
-        print("loading files")
-        self.load_files()
-        print("starting preprocessing")
-
-        for rf in self.radar_files:
-            rRes = self.preprocess_radar_file(rf)
-            np.save(
-                os.path.join(
-                    self.base_path,
-                    "preprocessed",
-                    "radar",
-                    rf.replace(".h5", ""),
-                ),
-                rRes,
-            )
-
-        for sf in self.satellite_files:
-            sRes = self.preprocess_satellite_file(sf)
-            np.save(
-                os.path.join(
-                    self.base_path,
-                    "preprocessed",
-                    "satellite",
-                    sf.replace(".nat", ""),
-                ),
-                sRes,
-            )
+def preprocess_radar_file(path):
+    path = os.path.join(PATH_TO_DATA, "radar", path)
+    radarFile = File(path)
+    return np.array(radarFile["reflectivity"])
 
 
-from_bucket = True
-bucket_url = "https://ams3.digitaloceanspaces.com"
-bucket_region = 'ams3'
-time_span = (datetime.datetime(2023, 4, 21, 0), datetime.datetime(2023, 4, 21, 12))
+def preprocess_satellite_file(path):
+    path = os.path.join(PATH_TO_DATA, "satellite", path)
+    scn = Scene(reader=READER, filenames=[path])
+    scn.load(SAT_CHANNELS)
+    local_scn = scn.resample(custom_area)
+    loaded_channels = [local_scn[x].values for x in SAT_CHANNELS]
+    return np.array(loaded_channels)
+
 
 @step
 def download_data() -> None:
-    if from_bucket == True:
-        session = boto3.session.Session()
-        client = session.client(
-            "s3",
-            endpoint_url=bucket_url,
-            region_name=bucket_region,
-            config=Config(
-                s3={"addressing_style": "virtual"}, signature_version=UNSIGNED
-            ),
-        )
-
-        for
+    """
+    First step in the pipeline, downloads the data.
+    """
+    bucketService = BucketService()
+    bucketService.getFiles()
+    time_span = (datetime.datetime(2023, 4, 21, 0), datetime.datetime(2023, 4, 21, 1))
+    bucketService.downloadFilesInRange(time_span=time_span)
+    unzip()
 
 
 @step
-def preprocessor() -> None:
-    pr = Sat2RadPreprocessor(base_path="../../../../data")
-    pr.preprocess()
+def load_data() -> Output(satellite_images=list, radar_images=list):
+    """
+    Second step in the pipeline gets available files in the respective folders.
+    Returns lists of files ordered by time.
+    """
+    radar_images = os.listdir(f"{PATH_TO_DATA}/radar")
+    satellite_images = os.listdir(f"{PATH_TO_DATA}/satellite")
 
-
-@step
-def load_data() -> tuple[list, list]:
-    radar_images = []
-    satellite_images = []
+    radar_images = order_based_on_file_timestamp(radar_images)
+    satellite_images = order_based_on_file_timestamp(satellite_images)
 
     return satellite_images, radar_images
 
 
+def compare_files(file1: str, file2: str) -> int:
+    date1, date2 = parseTime(file1), parseTime(file2)
+    if date1 > date2:
+        return 1
+    elif date1 < date2:
+        return -1
+
+    return 0
+
+
+def order_based_on_file_timestamp(files: list) -> list:
+    return sorted(files, key=cmp_to_key(compare_files))
+
+
+def unzip() -> None:
+    path = f"{PATH_TO_DATA}/satellite"
+    zips = os.listdir(path)
+
+    for file in zips:
+        print(file)
+        zip_path = f"{path}/{file}"
+
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(path)
+
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+
+        zip_ref.close()
+
+    # clean other files
+    files = os.listdir(path)
+    for file in files:
+        if not file.endswith(".nat"):
+            print("removing")
+            os.remove(f"{path}/{file}")
+
+
 @step
-def reproject_satellite_images() -> None:
-    pass
+def preprocess_satellite(filenames: list[str]) -> None:
+    """
+    Preprocessing of satellite data.
+    """
+    for file in filenames:
+        result = preprocess_satellite_file(file)
+        np.save(
+            os.path.join(
+                PATH_TO_DATA,
+                "preprocessed",
+                "satellite",
+                file.replace(".nat", ""),
+            ),
+            result,
+        )
 
 
-if __name__ == "__main__":
-    pr = Sat2RadPreprocessor(base_path="../../../../data/")
+@step
+def preprocess_radar(filenames: list[str]) -> None:
+    for file in filenames:
+        result = preprocess_radar_file(file)
+        np.save(
+            os.path.join(
+                PATH_TO_DATA,
+                "preprocessed",
+                "radar",
+                file.replace(".h5", ""),
+            ),
+            result,
+        )
 
-    pr.preprocess()
+
+@step
+def visualize_satellite_data(filenames: list) -> np.ndarray:
+    return np.ones((400, 400))
+
+
+@step
+def visualize_radar_data(filenames: list) -> np.ndarray:
+    return np.ones((400, 400))

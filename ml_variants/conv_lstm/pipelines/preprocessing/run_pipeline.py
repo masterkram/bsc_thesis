@@ -1,10 +1,15 @@
 from preprocessing_pipeline import preprocessing_pipeline
-from steps.preprocessors import preprocessor
+import steps.preprocessors as p
 
 
 def main():
     preprocessing_pipeline(
-        preprocessor=preprocessor(),
+        p.download_data(),
+        p.load_data(),
+        p.preprocess_satellite(),
+        p.preprocess_radar(),
+        p.visualize_satellite_data(),
+        p.visualize_radar_data(),
     ).run()
 
 

@@ -76,3 +76,7 @@ tqdm
 mlflow
 lightning
 boto3
+sklearn
+numpy
+matplotlib
+satpy
