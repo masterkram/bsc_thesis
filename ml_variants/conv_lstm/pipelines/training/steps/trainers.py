@@ -50,8 +50,6 @@ class Sat2Rad(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        print("boss")
-
         self.encoder = ConvLSTM(
             input_size=(250, 250),
             input_dim=4,
@@ -64,7 +62,7 @@ class Sat2Rad(pl.LightningModule):
             activation=F.tanh,
         )
 
-        self.upsample = nn.ConvTranspose2d(64, 1, (3, 3), output_size=y.size())
+        self.upsample = nn.ConvTranspose2d(64, 1, (3, 3))
 
         self.decoder = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=(3, 3))
 
@@ -91,8 +89,9 @@ class Sat2Rad(pl.LightningModule):
         self.loss_fn = nn.MSELoss()
 
     def training_step(self, batch, batch_idx):
+        x, y = batch
         yhat = self(batch)
-        y = torch.randn(248, 248).to(self.device)
+        # y = torch.randn(248, 248).to(self.device)
         loss = self.loss_fn(yhat, y)
         return loss
         # acc = self.calculate_accuracy(yhat, y)
@@ -102,7 +101,8 @@ class Sat2Rad(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         # this is the test loop
-        y = torch.randn(248, 248).to(self.device)
+        x, y = batch
+        # y = torch.randn(248, 248).to(self.device)
         loss = self.loss_fn(yhat, y)
         return loss
 
@@ -121,13 +121,15 @@ class Sat2Rad(pl.LightningModule):
         return accuracy(yhat, y, task="multiclass", num_classes=10)
 
     def forward(self, batch):
-        x, _ = batch
+        x, y = batch
         x = self.encoder(
             x, self.encoder.get_init_states(batch_size=1, device=self.device)
         )
         output = x[0][:, -1, :]
-        yhat = self.decoder(output)
-        yhat = yhat.reshape((1, 248, 248))
+        print(output.size())
+        print(y.size())
+        yhat = self.upsample(output, output_size=y[0].size())
+        # yhat = yhat.reshape((1, 248, 248))
         return yhat
 
 

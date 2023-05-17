@@ -75,3 +75,4 @@ torchvison
 tqdm
 mlflow
 lightning
+boto3

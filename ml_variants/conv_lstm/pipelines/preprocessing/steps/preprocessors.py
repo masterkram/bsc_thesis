@@ -11,6 +11,11 @@ import os
 import numpy as np
 import io
 from pyresample import geometry
+import boto3
+import botocore
+from botocore import UNSIGNED
+from botocore.client import Config
+import datetime
 
 netherlands_extent = geometry.AreaDefinition.from_extent(
     "netherlands",
@@ -74,10 +79,44 @@ class Sat2RadPreprocessor:
             )
 
 
+from_bucket = True
+bucket_url = "https://ams3.digitaloceanspaces.com"
+bucket_region = 'ams3'
+time_span = (datetime.datetime(2023, 4, 21, 0), datetime.datetime(2023, 4, 21, 12))
+
+@step
+def download_data() -> None:
+    if from_bucket == True:
+        session = boto3.session.Session()
+        client = session.client(
+            "s3",
+            endpoint_url=bucket_url,
+            region_name=bucket_region,
+            config=Config(
+                s3={"addressing_style": "virtual"}, signature_version=UNSIGNED
+            ),
+        )
+
+        for
+
+
 @step
 def preprocessor() -> None:
     pr = Sat2RadPreprocessor(base_path="../../../../data")
     pr.preprocess()
+
+
+@step
+def load_data() -> tuple[list, list]:
+    radar_images = []
+    satellite_images = []
+
+    return satellite_images, radar_images
+
+
+@step
+def reproject_satellite_images() -> None:
+    pass
 
 
 if __name__ == "__main__":
