@@ -9,16 +9,23 @@ from BucketService import BucketService
 from functools import cmp_to_key
 from parse_time import parseTime
 import zipfile
+import cv2
+
+import warnings
+from tqdm import tqdm
+
+warnings.filterwarnings("ignore")
 
 
 READER = "seviri_l1b_native"
 PROJECTION = "+proj=merc +lat_0=52.5 +lon_0=5.5 +ellps=WGS84"
 SAT_CHANNELS = ["VIS006", "VIS008", "IR_120", "IR_134"]
+RADAR_PARAMETER = "reflectivity"
 custom_area = create_area_def(
     "my_area",
     PROJECTION,
-    width=300,
-    height=300,
+    width=134,
+    height=166,
     area_extent=[0, 50, 10, 55],
     units="degrees",
 )
@@ -28,14 +35,16 @@ PATH_TO_DATA = "../../../../data"
 def preprocess_radar_file(path):
     path = os.path.join(PATH_TO_DATA, "radar", path)
     radarFile = File(path)
-    return np.array(radarFile["reflectivity"])
+    radar = np.array(radarFile[RADAR_PARAMETER])
+    resizeRadar = cv2.resize(radar, (134, 166))
+    return resizeRadar
 
 
 def preprocess_satellite_file(path):
     path = os.path.join(PATH_TO_DATA, "satellite", path)
     scn = Scene(reader=READER, filenames=[path])
     scn.load(SAT_CHANNELS)
-    local_scn = scn.resample(custom_area)
+    local_scn = scn.resample(custom_area, resampler="nearest")
     loaded_channels = [local_scn[x].values for x in SAT_CHANNELS]
     return np.array(loaded_channels)
 
@@ -45,11 +54,19 @@ def download_data() -> None:
     """
     First step in the pipeline, downloads the data.
     """
-    bucketService = BucketService()
-    bucketService.getFiles()
-    time_span = (datetime.datetime(2023, 4, 21, 0), datetime.datetime(2023, 4, 21, 1))
-    bucketService.downloadFilesInRange(time_span=time_span)
-    unzip()
+    # check if necessary
+    flag = False
+    if flag:
+        bucketService = BucketService()
+        bucketService.getFiles()
+        time_span = (
+            datetime.datetime(2023, 4, 21, 0),
+            datetime.datetime(2023, 4, 21, 23),
+        )
+        bucketService.downloadFilesInRange(time_span=time_span)
+        unzip()
+    else:
+        print("===== skipping downloads ======")
 
 
 @step
@@ -86,16 +103,16 @@ def unzip() -> None:
     zips = os.listdir(path)
 
     for file in zips:
-        print(file)
-        zip_path = f"{path}/{file}"
+        if file.endswith(".zip"):
+            zip_path = f"{path}/{file}"
 
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(path)
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(path)
 
-        if os.path.exists(zip_path):
-            os.remove(zip_path)
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
 
-        zip_ref.close()
+            zip_ref.close()
 
     # clean other files
     files = os.listdir(path)

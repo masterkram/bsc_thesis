@@ -13,6 +13,4 @@ def visualize(predict_dataloader: DataLoader, model: pl.LightningModule) -> np.n
     trainer = pl.Trainer()
     result = trainer.predict(model, predict_dataloader)
 
-    print(result)
-
-    return np.reshape(result[0].detach().numpy(), (248, 248))
+    return result["predict_dataloader"].detach().numpy()
