@@ -173,7 +173,6 @@ class ConvLSTM(nn.Module):
 
         self.cell_list = nn.ModuleList(cell_list)
 
-        self.device = "cpu"
         self.reset_parameters()
 
     def forward(self, input, hidden_state):
@@ -269,8 +268,6 @@ if __name__ == "__main__":
     # batch size, block size, channels, h x w
     x = torch.randn((32, 3, 4, 16, 16))
     # x = torch.randn((b_size, num_layers, hidden_dim, hidden_spt, hidden_spt))
-
-    # print(x)
 
     yhat = encoder.forward(
         x, hidden_state=encoder.get_init_states(batch_size=b_size, cuda=False)

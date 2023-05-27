@@ -1,11 +1,13 @@
 from preprocessing_pipeline import preprocessing_pipeline
 import steps.preprocessors as p
+from steps.statistics import get_statistics
 
 
 def main():
     preprocessing_pipeline(
         p.download_data(),
         p.load_data(),
+        get_statistics(),
         p.preprocess_satellite(),
         p.preprocess_radar(),
         p.visualize_satellite_data(),
