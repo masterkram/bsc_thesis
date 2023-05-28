@@ -33,11 +33,16 @@ PATH_TO_DATA = "../../../../data"
 
 
 def preprocess_radar_file(path: str, stats: dict):
-    rescale_ratio = 1 / stats["max"] if stats["max"] is not None else 1
+    rescale_ratio = 1 / stats["max"] if stats["max"] is not None else 1 / 255
 
     path = os.path.join(PATH_TO_DATA, "radar", path)
     radarFile = File(path)
     radar = np.array(radarFile[RADAR_PARAMETER])
+
+    # cut border mask with value 255
+    radar[radar >= 255] = 0
+
+    # normalize pixels between 0-1
     radar = radar * rescale_ratio
     resizeRadar = cv2.resize(radar, (134, 166))
     return resizeRadar

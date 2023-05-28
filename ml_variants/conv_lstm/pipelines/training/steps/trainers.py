@@ -235,7 +235,7 @@ class Sat2Rad(pl.LightningModule):
 )
 def trainer(train_dataloader: DataLoader) -> nn.Module:
     model = Sat2Rad()
-    trainer = pl.Trainer(max_epochs=10)
+    trainer = pl.Trainer(max_epochs=100)
 
     mlflow.pytorch.autolog()
 

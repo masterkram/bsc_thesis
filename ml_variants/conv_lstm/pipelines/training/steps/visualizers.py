@@ -9,6 +9,7 @@ import numpy as np
 from zenml.materializers.base_materializer import BaseMaterializer
 from PIL import Image
 import matplotlib.pyplot as plt
+import mlflow
 
 
 def make_gif(array: np.ndarray):
@@ -38,5 +39,6 @@ def visualize(predict_dataloader: DataLoader, model: pl.LightningModule) -> np.n
 
     # make_gif(radar_sequence)
     plt.imsave("test_image.png", radar_sequence[0])
+    # mlflow.log_artifact("test_image.png")
 
     return radar_sequence[0]
