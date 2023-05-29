@@ -38,7 +38,10 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
-zenml connect --url=https://zenml.infoplaza.com --username=mbruderer
+cp zenml.example.yaml zenml.yaml
+# customize zenml config file to your needs.
+zenml connect --config=zenml.yaml
+# set stack as needed here we will use infoplaza-local training
 zenml stack set infoplaza-local-training
 python ml_variants/mnist/pipelines/training/run_pipeline.py
 ```

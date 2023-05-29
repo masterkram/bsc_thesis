@@ -10,7 +10,7 @@ docker_settings = DockerSettings(
 
 @pipeline(settings={"docker": docker_settings})
 def conv_lstm_pipeline(importer, trainer, evaluator, visualizer):
-    train_dataloader, test_dataloader, predict_dataloader = importer()
-    model = trainer(train_dataloader)
+    train_dataloader, val_dataloader, test_dataloader, predict_dataloader = importer()
+    model = trainer(train_dataloader, val_dataloader)
     evaluator(test_dataloader=test_dataloader, model=model)
     visualizer(predict_dataloader, model)

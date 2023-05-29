@@ -61,6 +61,18 @@ class DatasetDistributor:
 #         value = next(self.dataset_distributor)
 
 
+def length_sliding_window_satellite(file_number: int, sequence_length: int) -> int:
+    return math.floor(
+        sum([x / sequence_length for x in range(sequence_length, file_number)])
+    )
+
+
+def length_sliding_window_radar(
+    file_number: int, sequence_length: int, sequence_length_satellite: int
+):
+    return 46
+
+
 class Sat2RadDataset(datasets.VisionDataset):
     def __init__(
         self,
@@ -108,6 +120,78 @@ class Sat2RadDataset(datasets.VisionDataset):
             np.load(file)
             for file in self.radar_files[lower_bound_radar:upper_bound_radar]
         ]
+
+        satellite_sequence = np.array(satellite_sequence)
+        radar_sequence = np.array(radar_sequence)
+
+        X = torch.from_numpy(satellite_sequence)
+        y = torch.from_numpy(radar_sequence)
+
+        return X, y.float()
+
+
+class Sat2RadDatasetSlidingWindow(datasets.VisionDataset):
+    def __init__(
+        self,
+        satellite_files: list[str],
+        radar_files: list[str],
+        root,
+        transforms,
+        radar_resolution_minutes: int = 5,
+        satellite_seq_len: int = 5,
+        radar_seq_len: int = 12,
+    ):
+        super().__init__(root, transform=transforms)
+        self.satellite_files = satellite_files
+        self.radar_files = radar_files
+        self.satellite_seq_len = satellite_seq_len
+        self.radar_seq_len = radar_seq_len
+        self.sat_len = len(self.satellite_files)
+        self.rad_len = len(self.radar_files)
+        self.radar_resolution_minutes = radar_resolution_minutes
+
+        len_sat_sliding = length_sliding_window_satellite(
+            self.sat_len, self.satellite_seq_len
+        )
+        len_rad_sliding = length_sliding_window_radar(
+            self.rad_len, self.radar_seq_len, self.satellite_seq_len
+        )
+
+        print(f"calculating lengths, {len_sat_sliding} -> {len_rad_sliding}")
+
+        self.len: int = min(len_sat_sliding, len_rad_sliding)
+
+    def __len__(self) -> int:
+        "Denotes the total number of samples"
+        return self.len
+
+    def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
+        "Generates one sample of data"
+
+        lower_bound_satellite = index
+        upper_bound_satellite = index + self.satellite_seq_len
+
+        # beginning of the day has 2 extra images before satellite image
+        lower_bound_radar = upper_bound_satellite * 3 + 1
+        upper_bound_radar = lower_bound_radar + self.radar_seq_len
+
+        assert upper_bound_radar - lower_bound_radar == self.radar_seq_len
+        assert upper_bound_satellite - lower_bound_satellite == self.satellite_seq_len
+
+        satellite_sequence = [
+            np.load(file)
+            for file in self.satellite_files[
+                lower_bound_satellite:upper_bound_satellite
+            ]
+        ]
+        radar_sequence = [
+            np.load(file)
+            for file in self.radar_files[lower_bound_radar:upper_bound_radar]
+        ]
+
+        print(self.rad_len, "radar length", f"requested: {upper_bound_radar}")
+        assert len(satellite_sequence) == self.satellite_seq_len
+        assert len(radar_sequence) == self.radar_seq_len
 
         satellite_sequence = np.array(satellite_sequence)
         radar_sequence = np.array(radar_sequence)
@@ -218,6 +302,7 @@ class Sat2RadDataModule(pl.LightningDataModule):
 def importer_sat2rad() -> (
     Output(
         train_dataloader=DataLoader,
+        val_dataloader=DataLoader,
         test_dataloader=DataLoader,
         predict_dataloader=DataLoader,
     )
@@ -227,6 +312,7 @@ def importer_sat2rad() -> (
     data_module.setup(None)
     return (
         data_module.train_dataloader(),
+        data_module.val_dataloader(),
         data_module.test_dataloader(),
         data_module.predict_dataloader(),
     )

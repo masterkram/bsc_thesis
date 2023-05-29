@@ -1,4 +1,7 @@
 import sys
+from typing import Any, Optional
+from lightning.pytorch.utilities.types import STEP_OUTPUT
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
 sys.path.insert(1, "/Users/mark/Projects/bsc_thesis/ml_variants/conv_lstm")
 
@@ -138,6 +141,12 @@ class Sat2Rad(pl.LightningModule):
         # self.log("train_loss", loss, on_epoch=True)
         # self.log("acc", acc, on_epoch=True)
 
+    def validation_step(self, batch, batch_idx):
+        _, y = batch
+        y_hat = self(batch)
+        loss = self.loss_fn(y_hat, y)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+
     def test_step(self, batch, batch_idx):
         # this is the test loop
         x, y = batch
@@ -167,10 +176,6 @@ class Sat2Rad(pl.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         return self(batch)
 
-    @staticmethod
-    def calculate_accuracy(yhat, y):
-        return accuracy(yhat, y, task="multiclass", num_classes=10)
-
     def encode_temporal(self, x: torch.Tensor):
         hidden = self.encoder.get_init_states(batch_size=1, device=self.device)
         _, encoder_state = self.encoder(x, hidden)
@@ -195,24 +200,6 @@ class Sat2Rad(pl.LightningModule):
         return decoder_output_list
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
-        # x, _ = batch
-
-        # # print(x.size(), "x size")
-
-        # encoder_state = self.encode_temporal(x)
-
-        # # print(encoder_state, "encoder size")
-
-        # decoder_output_list = self.decode_temporal(encoder_state)
-
-        # final_decoder_out = torch.cat(decoder_output_list, 1)
-
-        # decoder_out_rs = final_decoder_out.view(-1, 64, 166, 134)
-        # result = self.conv_decoder(decoder_out_rs)
-
-        # result = result.view(1, 12, 166, 134)
-
-        # return result
         x, y = batch
         state = self.encode_temporal(x)
 
@@ -233,14 +220,18 @@ class Sat2Rad(pl.LightningModule):
     experiment_tracker="Infoplaza MLFlow",
     settings={"experiment_tracker.mlflow": mlflow_settings},
 )
-def trainer(train_dataloader: DataLoader) -> nn.Module:
+def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Module:
     model = Sat2Rad()
-    trainer = pl.Trainer(max_epochs=100)
+    trainer = pl.Trainer(
+        max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
+    )
 
     mlflow.pytorch.autolog()
 
     mlflow.log_params(model.hparams)
-    trainer.fit(model, train_dataloader)
+    trainer.fit(
+        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader
+    )
 
     # fetch the auto logged parameters and metrics
     # log_utils.log_mlflow(run=mlflow.get_run(run_id=run.info.run_id))
