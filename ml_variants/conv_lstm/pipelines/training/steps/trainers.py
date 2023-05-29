@@ -35,9 +35,11 @@ class ConvDecoder(nn.Module):
             nn.Conv2d(
                 in_channels=64, out_channels=32, kernel_size=(3, 3), stride=1, padding=1
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=32, out_channels=16, kernel_size=(3, 3), stride=1, padding=1
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=16, out_channels=1, kernel_size=(3, 3), stride=1, padding=1
             ),
@@ -55,9 +57,11 @@ class ConvEncoder(nn.Module):
             nn.Conv2d(
                 in_channels=1, out_channels=16, kernel_size=(3, 3), stride=1, padding=1
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=16, out_channels=32, kernel_size=(3, 3), stride=1, padding=1
             ),
+            nn.ReLU(),
             nn.Conv2d(
                 in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1
             ),
@@ -75,6 +79,23 @@ class ConvEncoder(nn.Module):
         return output
 
 
+def weight_function(target):
+    result = target * 255
+    result = target[target < 2] = 1
+    mask = torch.logical_and(target < 5, target >= 2)
+    result = target[mask] = 2
+    mask = torch.logical_and(target < 10, target >= 5)
+    result = target[mask] = 5
+    mask = torch.logical_and(target < 30, target >= 10)
+    result = target[mask] = 10
+    result = target[target >= 30] = 30
+    return result
+
+
+def balanced_mae(output, target):
+    return torch.mean(torch.abs((target - output) * weight_function(target)))
+
+
 class Sat2Rad(pl.LightningModule):
     def __init__(self):
         super().__init__()
@@ -85,9 +106,9 @@ class Sat2Rad(pl.LightningModule):
         self.encoder = ConvLSTM(
             input_size=(166, 134),
             input_dim=4,
-            hidden_dim=[64],
+            hidden_dim=[64, 64, 64],
             kernel_size=(3, 3),
-            num_layers=1,
+            num_layers=3,
             peephole=True,
             batchnorm=False,
             batch_first=True,
@@ -97,9 +118,9 @@ class Sat2Rad(pl.LightningModule):
         self.decoder = ConvLSTM(
             input_size=(166, 134),
             input_dim=64,
-            hidden_dim=[64],
+            hidden_dim=[64, 64, 64],
             kernel_size=(3, 3),
-            num_layers=1,
+            num_layers=3,
             peephole=True,
             batchnorm=False,
             batch_first=True,
