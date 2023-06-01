@@ -1,4 +1,5 @@
-from zenml.steps import Output, step
+from zenml import step
+from zenml.steps import Output
 from satpy import Scene
 from h5py import File
 import os
@@ -10,6 +11,7 @@ from functools import cmp_to_key
 from parse_time import parseTime
 import zipfile
 import cv2
+from typing import List
 
 import warnings
 from tqdm import tqdm
@@ -19,21 +21,35 @@ warnings.filterwarnings("ignore")
 
 READER = "seviri_l1b_native"
 PROJECTION = "+proj=merc +lat_0=52.5 +lon_0=5.5 +ellps=WGS84"
-SAT_CHANNELS = ["VIS006", "VIS008", "IR_120", "IR_134"]
+SAT_CHANNELS = [
+    "IR_016",
+    "IR_039",
+    "IR_087",
+    "IR_097",
+    "IR_108",
+    "IR_120",
+    "IR_134",
+    "VIS006",
+    "VIS008",
+    "WV_062",
+    "WV_073",
+]
+
 RADAR_PARAMETER = "reflectivity"
 custom_area = create_area_def(
     "my_area",
     PROJECTION,
-    width=134,
-    height=166,
-    area_extent=[0, 50, 10, 55],
+    width=300,
+    height=300,
+    # area_extent=[0, 50, 10, 55],
+    area_extent=[-7, 40, 11, 58],
     units="degrees",
 )
 PATH_TO_DATA = "../../../../data"
 
 
 def preprocess_radar_file(path: str, stats: dict):
-    rescale_ratio = 1 / stats["max"] if stats["max"] is not None else 1 / 255
+    rescale_ratio = 1 / 255
 
     path = os.path.join(PATH_TO_DATA, "radar", path)
     radarFile = File(path)
@@ -78,7 +94,7 @@ def download_data() -> None:
 
 
 @step
-def load_data() -> Output(satellite_images=list, radar_images=list):
+def load_data() -> Output(satellite_images=List, radar_images=List):
     """
     Second step in the pipeline gets available files in the respective folders.
     Returns lists of files ordered by time.
@@ -102,7 +118,7 @@ def compare_files(file1: str, file2: str) -> int:
     return 0
 
 
-def order_based_on_file_timestamp(files: list) -> list:
+def order_based_on_file_timestamp(files: List) -> List:
     return sorted(files, key=cmp_to_key(compare_files))
 
 
@@ -131,11 +147,11 @@ def unzip() -> None:
 
 
 @step
-def preprocess_satellite(filenames: list[str]) -> None:
+def preprocess_satellite(filenames: List[str]) -> None:
     """
     Preprocessing of satellite data.
     """
-    for file in filenames:
+    for file in tqdm(filenames, desc="preprocessing satellite"):
         result = preprocess_satellite_file(file)
         np.save(
             os.path.join(
@@ -149,8 +165,8 @@ def preprocess_satellite(filenames: list[str]) -> None:
 
 
 @step
-def preprocess_radar(filenames: list[str], stats: dict) -> None:
-    for file in filenames:
+def preprocess_radar(filenames: List[str], stats: dict) -> None:
+    for file in tqdm(filenames, desc="preprocessing radar"):
         result = preprocess_radar_file(file, stats)
         np.save(
             os.path.join(
@@ -164,10 +180,10 @@ def preprocess_radar(filenames: list[str], stats: dict) -> None:
 
 
 @step
-def visualize_satellite_data(filenames: list) -> np.ndarray:
+def visualize_satellite_data(filenames: List) -> np.ndarray:
     return np.ones((400, 400))
 
 
 @step
-def visualize_radar_data(filenames: list) -> np.ndarray:
+def visualize_radar_data(filenames: List) -> np.ndarray:
     return np.ones((400, 400))

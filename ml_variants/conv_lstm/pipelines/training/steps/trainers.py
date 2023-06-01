@@ -32,17 +32,10 @@ class ConvDecoder(nn.Module):
         super().__init__()
 
         self.cnn_decoder = nn.Sequential(
-            nn.Conv2d(
-                in_channels=64, out_channels=32, kernel_size=(3, 3), stride=1, padding=1
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=32, out_channels=16, kernel_size=(3, 3), stride=1, padding=1
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=16, out_channels=1, kernel_size=(3, 3), stride=1, padding=1
-            ),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=(3, 3), stride=1),
+            nn.Conv2d(in_channels=32, out_channels=16, kernel_size=(3, 3), stride=1),
+            nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(2, 3), stride=1),
+            nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(130, 161), stride=1),
         )
 
     def forward(self, batch):
@@ -51,23 +44,27 @@ class ConvDecoder(nn.Module):
 
 
 class ConvEncoder(nn.Module):
-    def __init__(self, out_dim=64):
+    def __init__(self, in_channels=11, out_dim=64):
         super(ConvEncoder, self).__init__()
+        self.in_channels = in_channels
+        self.out_dim = out_dim
         self.cnn_encoder = nn.Sequential(
             nn.Conv2d(
-                in_channels=1, out_channels=16, kernel_size=(3, 3), stride=1, padding=1
+                in_channels=self.in_channels,
+                out_channels=16,
+                kernel_size=(3, 3),
+                padding="same",
             ),
-            nn.ReLU(),
             nn.Conv2d(
-                in_channels=16, out_channels=32, kernel_size=(3, 3), stride=1, padding=1
+                in_channels=16, out_channels=32, kernel_size=(3, 3), padding="same"
             ),
-            nn.ReLU(),
             nn.Conv2d(
-                in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1
+                in_channels=32,
+                out_channels=self.out_dim,
+                kernel_size=(3, 3),
+                padding="same",
             ),
         )
-
-        self.out_dim = out_dim
         # self.device  = 'cpu'
 
     # def cuda(self, device='cuda'):
@@ -102,13 +99,23 @@ class Sat2Rad(pl.LightningModule):
         self.save_hyperparameters()
 
         self.radar_sequence_length = 12
+        self.satellite_channels = 11
+        self.input_image_size = (300, 300)
+        self.output_image_size = (166, 134)
+
+        self.model_img_dim = 300
+        hidden_img = (self.model_img_dim, self.model_img_dim)
+        hidden_dim = [64, 64, 64]
+        layers = len(hidden_dim)
+        channels = 64
+        kernel_size = (3, 3)
 
         self.encoder = ConvLSTM(
-            input_size=(166, 134),
-            input_dim=4,
-            hidden_dim=[64, 64, 64],
-            kernel_size=(3, 3),
-            num_layers=3,
+            input_size=hidden_img,
+            input_dim=channels,
+            hidden_dim=hidden_dim,
+            kernel_size=kernel_size,
+            num_layers=layers,
             peephole=True,
             batchnorm=False,
             batch_first=True,
@@ -116,26 +123,26 @@ class Sat2Rad(pl.LightningModule):
         )
 
         self.decoder = ConvLSTM(
-            input_size=(166, 134),
-            input_dim=64,
-            hidden_dim=[64, 64, 64],
-            kernel_size=(3, 3),
-            num_layers=3,
+            input_size=hidden_img,
+            input_dim=channels,
+            hidden_dim=hidden_dim,
+            kernel_size=kernel_size,
+            num_layers=layers,
             peephole=True,
             batchnorm=False,
             batch_first=True,
             activation=F.tanh,
         )
 
-        self.cnn_encoder = ConvEncoder(out_dim=64)
+        self.cnn_encoder = ConvEncoder(
+            in_channels=self.satellite_channels, out_dim=channels
+        )
         self.cnn_decoder = ConvDecoder()
 
         self.loss_fn = nn.MSELoss()
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        state = self.encode_temporal(x)
-
         # y = y.view(1, 12, 1, 166, 134)
         # y passed => teacher forcing
         # if True:
@@ -143,11 +150,25 @@ class Sat2Rad(pl.LightningModule):
         #     print(cnn_encoder_out.size())
         #     nextf_enc = cnn_encoder_out.view(1, 12, 64, 166, 134)
 
+        prev_sequence_raw = x.view(
+            -1,
+            self.satellite_channels,
+            self.input_image_size[0],
+            self.input_image_size[1],
+        )
+        prev_sequence_encoded = self.cnn_encoder(prev_sequence_raw).view(
+            1, 5, 64, self.model_img_dim, self.model_img_dim
+        )
+
+        state = self.encode_temporal(prev_sequence_encoded)
+
         decoder_output_list = self.decode_temporal(state=state)
 
         final_decoder_out = torch.cat(decoder_output_list, 1)
 
-        decoder_out_rs = final_decoder_out.view(-1, 64, 166, 134)
+        decoder_out_rs = final_decoder_out.view(
+            -1, 64, self.model_img_dim, self.model_img_dim
+        )
         result = self.cnn_decoder(decoder_out_rs)
 
         y_hat = result.view(1, 12, 166, 134)
@@ -169,26 +190,10 @@ class Sat2Rad(pl.LightningModule):
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        # this is the test loop
-        x, y = batch
-        state = self.encode_temporal(x)
-
-        # y = y.view(1, 12, 1, 166, 134)
-        # y passed => teacher forcing
-        decoder_output_list = self.decode_temporal(state)
-
-        final_decoder_out = torch.cat(decoder_output_list, 1)
-
-        decoder_out_rs = final_decoder_out.view(-1, 64, 166, 134)
-        result = self.cnn_decoder(decoder_out_rs)
-
-        y_hat = result.view(1, 12, 166, 134)
-
+        _, y = batch
+        y_hat = self(batch)
         loss = self.loss_fn(y_hat, y)
-
-        return loss
-
-        # self.log("acc", acc, on_epoch=True)
+        self.log("test_loss", loss, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=1e-3)
@@ -205,7 +210,9 @@ class Sat2Rad(pl.LightningModule):
     def decode_temporal(self, state: torch.Tensor, y=None):
         decoder_output_list = []
 
-        initial_input = torch.zeros((1, 1, 64, 166, 134)).to(self.device)
+        initial_input = torch.ones(
+            (1, 1, 64, self.model_img_dim, self.model_img_dim)
+        ).to(self.device)
 
         # call decoder in succession
         for i in range(self.radar_sequence_length):
@@ -222,13 +229,25 @@ class Sat2Rad(pl.LightningModule):
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, y = batch
-        state = self.encode_temporal(x)
+
+        prev_sequence_raw = x.view(
+            -1,
+            self.satellite_channels,
+            self.input_image_size[0],
+            self.input_image_size[1],
+        )
+        prev_sequence_encoded = self.cnn_encoder(prev_sequence_raw).view(
+            1, 5, 64, self.model_img_dim, self.model_img_dim
+        )
+        state = self.encode_temporal(prev_sequence_encoded)
 
         decoder_output_list = self.decode_temporal(state)
 
         final_decoder_out = torch.cat(decoder_output_list, 1)
 
-        decoder_out_rs = final_decoder_out.view(-1, 64, 166, 134)
+        decoder_out_rs = final_decoder_out.view(
+            -1, 64, self.model_img_dim, self.model_img_dim
+        )
         result = self.cnn_decoder(decoder_out_rs)
 
         y_hat = result.view(1, 12, 166, 134)
@@ -243,9 +262,10 @@ class Sat2Rad(pl.LightningModule):
 )
 def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Module:
     model = Sat2Rad()
-    trainer = pl.Trainer(
-        max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
-    )
+    # trainer = pl.Trainer(
+    #     max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
+    # )
+    trainer = pl.Trainer(max_epochs=100)
 
     mlflow.pytorch.autolog()
 

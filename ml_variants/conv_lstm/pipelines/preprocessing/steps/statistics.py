@@ -13,6 +13,7 @@ import cv2
 
 import warnings
 from tqdm import tqdm
+from typing import List
 
 PATH_TO_DATA = "../../../../data"
 RADAR_PARAMETER = "reflectivity"
@@ -20,7 +21,7 @@ RADAR_PARAMETER = "reflectivity"
 
 @step
 def get_statistics(
-    satellite_data: list, radar_data: list
+    satellite_data: List, radar_data: List
 ) -> Output(satellite_stats=dict, radar_stats=dict):
     max_radar_value = 0
     for radar_image in radar_data:

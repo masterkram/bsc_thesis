@@ -11,6 +11,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import mlflow
 
+SAVE_FOLDER = "../viz/"
+
 
 def make_gif(array: np.ndarray):
     # imgs = np.random.randint(0, 255, (100, 50, 50, 3), dtype=np.uint8)
@@ -18,7 +20,11 @@ def make_gif(array: np.ndarray):
     imgs = [Image.fromarray(img) for img in array]
     # duration is the number of milliseconds between frames; this is 40 frames per second
     imgs[0].save(
-        "array.gif", save_all=True, append_images=imgs[1:], duration=50, loop=0
+        f"{SAVE_FOLDER}array.gif",
+        save_all=True,
+        append_images=imgs[1:],
+        duration=50,
+        loop=0,
     )
 
 
@@ -31,14 +37,10 @@ def visualize(predict_dataloader: DataLoader, model: pl.LightningModule) -> np.n
     trainer = pl.Trainer()
     result = trainer.predict(model, predict_dataloader)
 
-    print(result[0].size())
-
     radar_sequence = result[0][0, :, :, :].detach().numpy()
 
-    print(radar_sequence.shape)
-
     make_gif(radar_sequence)
-    plt.imsave("test_image.png", radar_sequence[0])
+    plt.imsave(f"{SAVE_FOLDER}test_image.png", radar_sequence[0])
     # mlflow.log_artifact("test_image.png")
 
     return radar_sequence[0]
