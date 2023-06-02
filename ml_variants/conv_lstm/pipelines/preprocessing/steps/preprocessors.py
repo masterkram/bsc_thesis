@@ -21,6 +21,15 @@ warnings.filterwarnings("ignore")
 
 READER = "seviri_l1b_native"
 PROJECTION = "+proj=merc +lat_0=52.5 +lon_0=5.5 +ellps=WGS84"
+pp = "+proj=geos +h=35785831 +lat_0=52.5 +lon_0=5.5 +ellps=WGS84"
+mi_area = create_area_def(
+    "my_area",
+    projection=pp,
+    width=300,
+    height=300,
+    area_extent=[-7, 40, 11, 58],
+    units="deg",
+)
 SAT_CHANNELS = [
     "IR_016",
     "IR_039",
@@ -67,8 +76,10 @@ def preprocess_radar_file(path: str, stats: dict):
 def preprocess_satellite_file(path):
     path = os.path.join(PATH_TO_DATA, "satellite", path)
     scn = Scene(reader=READER, filenames=[path])
-    scn.load(SAT_CHANNELS)
-    local_scn = scn.resample(custom_area, resampler="nearest")
+    scn.load(SAT_CHANNELS, upper_right_corner="NE")
+    local_scn = scn.crop(mi_area)
+    local_scn.resample(resampler="native")
+    # local_scn = scn.resample(custom_area, resampler="nearest")
     loaded_channels = [local_scn[x].values for x in SAT_CHANNELS]
     return np.array(loaded_channels)
 

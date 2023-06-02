@@ -40,8 +40,11 @@ def importer_sat2rad() -> (
 
 
 if __name__ == "__main__":
-    data_module = Sat2RadDataModule(data_dir=PATH_TO_DATA, batch_size=1)
+    data_module = Sat2RadDataModule(data_dir="../../../../../data", batch_size=1)
     data_module.prepare_data()
     data_module.setup(None)
     dataset = iter(data_module.train_dataloader())
-    print(next(dataset)[1].size())
+    # print(next(dataset)[1].size())
+    mygt = [x[1].detach().numpy() for x in iter(dataset)]
+    print(len(mygt))
+    print(mygt[0][0].shape)

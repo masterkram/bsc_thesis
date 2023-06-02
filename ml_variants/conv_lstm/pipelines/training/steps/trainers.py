@@ -33,9 +33,13 @@ class ConvDecoder(nn.Module):
 
         self.cnn_decoder = nn.Sequential(
             nn.Conv2d(in_channels=64, out_channels=32, kernel_size=(3, 3), stride=1),
+            nn.ReLU(),
             nn.Conv2d(in_channels=32, out_channels=16, kernel_size=(3, 3), stride=1),
+            nn.ReLU(),
             nn.Conv2d(in_channels=16, out_channels=1, kernel_size=(2, 3), stride=1),
-            nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(130, 161), stride=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(3, 103), stride=1),
+            nn.Tanh(),
         )
 
     def forward(self, batch):
@@ -50,20 +54,14 @@ class ConvEncoder(nn.Module):
         self.out_dim = out_dim
         self.cnn_encoder = nn.Sequential(
             nn.Conv2d(
-                in_channels=self.in_channels,
-                out_channels=16,
-                kernel_size=(3, 3),
-                padding="same",
+                in_channels=self.in_channels, out_channels=16, kernel_size=(3, 3)
             ),
-            nn.Conv2d(
-                in_channels=16, out_channels=32, kernel_size=(3, 3), padding="same"
-            ),
-            nn.Conv2d(
-                in_channels=32,
-                out_channels=self.out_dim,
-                kernel_size=(3, 3),
-                padding="same",
-            ),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), stride=2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3)),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=64, out_channels=self.out_dim, kernel_size=(3, 3)),
         )
         # self.device  = 'cpu'
 
@@ -100,11 +98,11 @@ class Sat2Rad(pl.LightningModule):
 
         self.radar_sequence_length = 12
         self.satellite_channels = 11
-        self.input_image_size = (300, 300)
+        self.input_image_size = (357, 495)
         self.output_image_size = (166, 134)
 
-        self.model_img_dim = 300
-        hidden_img = (self.model_img_dim, self.model_img_dim)
+        self.model_img_dim = (173, 242)
+        hidden_img = (173, 242)
         hidden_dim = [64, 64, 64]
         layers = len(hidden_dim)
         channels = 64
@@ -139,7 +137,8 @@ class Sat2Rad(pl.LightningModule):
         )
         self.cnn_decoder = ConvDecoder()
 
-        self.loss_fn = nn.MSELoss()
+        # self.loss_fn = nn.MSELoss()
+        self.loss_fn = balanced_mae
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -157,7 +156,7 @@ class Sat2Rad(pl.LightningModule):
             self.input_image_size[1],
         )
         prev_sequence_encoded = self.cnn_encoder(prev_sequence_raw).view(
-            1, 5, 64, self.model_img_dim, self.model_img_dim
+            1, 5, 64, self.model_img_dim[0], self.model_img_dim[1]
         )
 
         state = self.encode_temporal(prev_sequence_encoded)
@@ -167,7 +166,7 @@ class Sat2Rad(pl.LightningModule):
         final_decoder_out = torch.cat(decoder_output_list, 1)
 
         decoder_out_rs = final_decoder_out.view(
-            -1, 64, self.model_img_dim, self.model_img_dim
+            -1, 64, self.model_img_dim[0], self.model_img_dim[1]
         )
         result = self.cnn_decoder(decoder_out_rs)
 
@@ -211,7 +210,7 @@ class Sat2Rad(pl.LightningModule):
         decoder_output_list = []
 
         initial_input = torch.ones(
-            (1, 1, 64, self.model_img_dim, self.model_img_dim)
+            (1, 1, 64, self.model_img_dim[0], self.model_img_dim[1])
         ).to(self.device)
 
         # call decoder in succession
@@ -237,7 +236,7 @@ class Sat2Rad(pl.LightningModule):
             self.input_image_size[1],
         )
         prev_sequence_encoded = self.cnn_encoder(prev_sequence_raw).view(
-            1, 5, 64, self.model_img_dim, self.model_img_dim
+            1, 5, 64, self.model_img_dim[0], self.model_img_dim[1]
         )
         state = self.encode_temporal(prev_sequence_encoded)
 
@@ -246,7 +245,7 @@ class Sat2Rad(pl.LightningModule):
         final_decoder_out = torch.cat(decoder_output_list, 1)
 
         decoder_out_rs = final_decoder_out.view(
-            -1, 64, self.model_img_dim, self.model_img_dim
+            -1, 64, self.model_img_dim[0], self.model_img_dim[1]
         )
         result = self.cnn_decoder(decoder_out_rs)
 
