@@ -1,8 +1,14 @@
 [downloads]
-skip = true
+skip = false
+endpoint = 'https://ams3.digitaloceanspaces.com'
+region = 'ams3'
+bucket_name = 'infoplaza-data-scientist-m-bruder'
+digital_ocean = true
+directory = '../../../../../data'
 [downloads.range]
+all = true
 start = 2023-04-21T00:00:00Z
-end = 2023-04-21T23:00:00Z
+end = 2023-06-21T23:00:00Z
 
 [satellite]
 reader = "seviri_l1b_native"

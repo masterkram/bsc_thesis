@@ -5,17 +5,19 @@ from botocore.client import Config
 import os
 import sys
 from typing import List
+import typed_settings as ts
+from tqdm import tqdm
 
 sys.path.append("../../")
+
+from Settings import DownloadSettings
 
 from util.log_utils import write_log
 from util.parse_time import parseTime
 
-
-ENDPOINT = "https://ams3.digitaloceanspaces.com"
-REGION = "ams3"
-BUCKET_NAME = "infoplaza-data-scientist-m-bruder"
 OCEAN_CONFIG = Config(s3={"addressing_style": "virtual"}, signature_version=UNSIGNED)
+
+settings = ts.load(DownloadSettings, "downloads", config_files=["config.toml"])
 
 
 class BucketService:
@@ -27,28 +29,44 @@ class BucketService:
             if client != None
             else boto3.client(
                 "s3",
-                endpoint_url=ENDPOINT,
-                region_name=REGION,
+                endpoint_url=settings.endpoint,
+                region_name=settings.region,
                 config=OCEAN_CONFIG,
             )
         )
         self.data_folder_path = data_folder_path
 
     def getFiles(self) -> List:
-        response = self.client.list_objects_v2(Bucket=BUCKET_NAME, MaxKeys=1000)
+        response = self.client.list_objects(Bucket=settings.bucket_name)
         self.data = response["Contents"]
         while response["IsTruncated"]:
             continuation_token = response["NextContinuationToken"]
             response = self.client.list_objects_v2(
-                Bucket=BUCKET_NAME, MaxKeys=1000, ContinuationToken=continuation_token
+                Bucket=settings.bucket_name,
+                MaxKeys=1000,
+                ContinuationToken=continuation_token,
             )
             self.data.extend(response["Contents"])
         return self.data
 
     def downloadFile(self, key: str) -> None:
-        self.client.download_file(BUCKET_NAME, key, f"{self.data_folder_path}/{key}")
+        splitKey = key.split("/")
 
-    def downloadFilesInRange(self, time_span: tuple) -> bool:
+        if len(splitKey) != 5 or len(splitKey[-1]) == 0:
+            return
+
+        if "radar" in splitKey[0]:
+            splitKey[0] = "radar"
+        elif "satellite" in splitKey[0]:
+            splitKey[0] = "satellite"
+
+        return self.client.download_file(
+            settings.bucket_name,
+            key,
+            os.path.join(self.data_folder_path, splitKey[0], splitKey[1]),
+        )
+
+    def downloadFilesInRange(self, time_span: tuple, loadBar=False) -> bool:
         """
         Downloads files available in bucket.
 
@@ -64,7 +82,7 @@ class BucketService:
         if self.data == None or type(self.data) is not list:
             raise Exception("list of files does not exist. Query them with getFiles()")
 
-        for obj in self.data:
+        for obj in tqdm(self.data):
             key = obj["Key"]
             # skip if already available:
             nat = key.replace("zip", "nat")
@@ -73,8 +91,9 @@ class BucketService:
             ):
                 continue
 
-            if time_span != None:
+            if time_span is not None:
                 time_object = parseTime(key)
+
                 if (
                     time_object != None
                     and time_object > time_span[0]
@@ -84,5 +103,5 @@ class BucketService:
             else:
                 self.downloadFile(key)
 
-    def downloadAllFiles(self):
-        return self.downloadFilesInRange(None)
+    def downloadAllFiles(self, loadBar=False):
+        return self.downloadFilesInRange(None, loadBar)

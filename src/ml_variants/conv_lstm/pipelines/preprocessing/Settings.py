@@ -43,6 +43,7 @@ class RadarSettings:
 
 @ts.settings
 class DateRange:
+    all: bool
     start: datetime.datetime
     end: datetime.datetime
 
@@ -50,4 +51,9 @@ class DateRange:
 @ts.settings
 class DownloadSettings:
     skip: bool
+    endpoint: str
+    region: str
+    bucket_name: str
+    digital_ocean: bool
     range: DateRange
+    directory: str
