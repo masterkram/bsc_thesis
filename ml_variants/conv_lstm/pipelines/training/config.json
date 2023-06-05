@@ -1,8 +1,0 @@
-{
-  "data": {
-    "satellite_seq_len": 6,
-    "radar_seq_len": 12,
-    "radar_res_min": 5,
-    "satellite_res_min": 15
-  }
-}
