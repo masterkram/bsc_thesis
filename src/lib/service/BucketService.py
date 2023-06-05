@@ -4,6 +4,7 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import os
 import sys
+from typing import List
 
 sys.path.append("../../")
 
@@ -33,9 +34,15 @@ class BucketService:
         )
         self.data_folder_path = data_folder_path
 
-    def getFiles(self) -> list:
-        response = self.client.list_objects(Bucket=BUCKET_NAME)
+    def getFiles(self) -> List:
+        response = self.client.list_objects_v2(Bucket=BUCKET_NAME, MaxKeys=1000)
         self.data = response["Contents"]
+        while response["IsTruncated"]:
+            continuation_token = response["NextContinuationToken"]
+            response = self.client.list_objects_v2(
+                Bucket=BUCKET_NAME, MaxKeys=1000, ContinuationToken=continuation_token
+            )
+            self.data.extend(response["Contents"])
         return self.data
 
     def downloadFile(self, key: str) -> None:
