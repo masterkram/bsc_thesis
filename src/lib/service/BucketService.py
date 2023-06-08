@@ -37,7 +37,7 @@ class BucketService:
         self.data_folder_path = data_folder_path
 
     def getFiles(self) -> List:
-        response = self.client.list_objects(Bucket=settings.bucket_name)
+        response = self.client.list_objects_v2(Bucket=settings.bucket_name)
         self.data = response["Contents"]
         while response["IsTruncated"]:
             continuation_token = response["NextContinuationToken"]
@@ -50,20 +50,29 @@ class BucketService:
         return self.data
 
     def downloadFile(self, key: str) -> None:
+        isSatellite = key.startswith("satellite/")
+        isRadar = key.startswith("radar-nl/")
+
+        limit = 0
+        if isSatellite:
+            limit = 2
+        elif isRadar:
+            limit = 5
+        else:
+            return
+
         splitKey = key.split("/")
 
-        if len(splitKey) != 5 or len(splitKey[-1]) == 0:
+        if len(splitKey) != limit or len(splitKey[-1]) <= 0:
             return
 
         if "radar" in splitKey[0]:
             splitKey[0] = "radar"
-        elif "satellite" in splitKey[0]:
-            splitKey[0] = "satellite"
 
         return self.client.download_file(
             settings.bucket_name,
             key,
-            os.path.join(self.data_folder_path, splitKey[0], splitKey[1]),
+            os.path.join(self.data_folder_path, splitKey[0], splitKey[-1]),
         )
 
     def downloadFilesInRange(self, time_span: tuple, loadBar=False) -> bool:

@@ -28,5 +28,11 @@ class ModelSettings:
 
 
 @ts.settings
+class MlFlowSettings:
+    experiment_name: str
+    experiment_tracker: str
+
+
+@ts.settings
 class VisualizeSettings:
     output_dir: str

@@ -9,6 +9,7 @@ from DatasetDistributor import DatasetDistributor
 from Sat2RadDataset import Sat2RadDataset
 from DatasetSequence import Sat2RadDatasetSequence
 from rich import table
+from typing import List, Dict
 
 from util.parse_time import order_based_on_file_timestamp
 from util.log_utils import write_log
@@ -62,10 +63,10 @@ class Sat2RadDataModule(pl.LightningDataModule):
                 return Sat2RadDatasetSequence
 
     def setup(self, stage: str):
-        sat, rad = self.ordered_files()
+        self.sat, self.rad = self.ordered_files()
 
-        amount_of_satellite_files = len(sat)
-        amount_of_radar_files = len(rad)
+        amount_of_satellite_files = len(self.sat)
+        amount_of_radar_files = len(self.rad)
 
         satdst = DatasetDistributor(
             file_quantity=amount_of_satellite_files, splits=list(self.splits.values())
@@ -74,24 +75,32 @@ class Sat2RadDataModule(pl.LightningDataModule):
             file_quantity=amount_of_radar_files, splits=list(self.splits.values())
         )
 
-        train_satellite_files = get_files_in_range(sat, next(satdst))
-        train_radar_files = get_files_in_range(rad, next(raddst))
-        val_satellite_files = get_files_in_range(sat, next(satdst))
-        val_radar_files = get_files_in_range(rad, next(raddst))
-        test_satellite_files = get_files_in_range(sat, next(satdst))
-        test_radar_files = get_files_in_range(rad, next(raddst))
+        self.train_satellite_files = get_files_in_range(self.sat, next(satdst))
+        self.train_radar_files = get_files_in_range(self.rad, next(raddst))
+        self.val_satellite_files = get_files_in_range(self.sat, next(satdst))
+        self.val_radar_files = get_files_in_range(self.rad, next(raddst))
+        self.test_satellite_files = get_files_in_range(self.sat, next(satdst))
+        self.test_radar_files = get_files_in_range(self.rad, next(raddst))
 
         t = table.Table(title="Partitioned Files")
         t.add_column("split", style="magenta")
         t.add_column("satellite", justify="right", style="green")
         t.add_column("radar", justify="right", style="cyan")
         t.add_row(
-            "training", str(len(train_satellite_files)), str(len(train_radar_files))
+            "training",
+            str(len(self.train_satellite_files)),
+            str(len(self.train_radar_files)),
         )
         t.add_row(
-            "validation", str(len(val_satellite_files)), str(len(val_radar_files))
+            "validation",
+            str(len(self.val_satellite_files)),
+            str(len(self.val_radar_files)),
         )
-        t.add_row("testing", str(len(test_satellite_files)), str(len(test_radar_files)))
+        t.add_row(
+            "testing",
+            str(len(self.test_satellite_files)),
+            str(len(self.test_radar_files)),
+        )
 
         write_log(t)
 
@@ -99,31 +108,41 @@ class Sat2RadDataModule(pl.LightningDataModule):
 
         # training datasets
         self.train = DataSet(
-            satellite_files=train_satellite_files,
-            radar_files=train_radar_files,
+            satellite_files=self.train_satellite_files,
+            radar_files=self.train_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
         self.validate = DataSet(
-            satellite_files=val_satellite_files,
-            radar_files=val_radar_files,
+            satellite_files=self.val_satellite_files,
+            radar_files=self.val_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
         # test dataset
         self.test = DataSet(
-            satellite_files=test_satellite_files,
-            radar_files=test_radar_files,
+            satellite_files=self.test_satellite_files,
+            radar_files=self.test_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
         # prediction dataset
         self.predict = DataSet(
-            satellite_files=test_satellite_files,
-            radar_files=test_radar_files,
+            satellite_files=self.test_satellite_files,
+            radar_files=self.test_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
+
+    def get_files(self) -> Dict:
+        return {
+            "training": {
+                "sat": self.train_satellite_files,
+                "rad": self.train_radar_files,
+            },
+            "valid": {"sat": self.val_satellite_files, "rad": self.val_radar_files},
+            "test": {"sat": self.test_satellite_files, "rad": self.test_radar_files},
+        }
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size)

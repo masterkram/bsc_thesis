@@ -30,7 +30,8 @@ def download_data() -> None:
     # check if necessary
     if not downloadSettings.skip:
         bucketService = BucketService(data_folder_path=downloadSettings.directory)
-        bucketService.getFiles()
+        files = bucketService.getFiles()
+        write_log(f"downloading {len(files)} files :checkered_flag:")
         time_span = (downloadSettings.range.start, downloadSettings.range.end)
         if downloadSettings.range.all:
             write_log("downloading all files :folded_hands:")

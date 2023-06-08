@@ -50,4 +50,4 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         X = torch.from_numpy(satellite_sequence)
         y = torch.from_numpy(radar_sequence)
 
-        return X.float(), y.float()
+        return X.float(), y.long()

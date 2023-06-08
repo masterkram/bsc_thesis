@@ -7,6 +7,7 @@ from satpy import Scene
 import numpy as np
 import sys
 import typed_settings as ts
+from typing import Dict
 
 sys.path.append("../")
 
@@ -28,6 +29,7 @@ def importer_sat2rad() -> (
         val_dataloader=DataLoader,
         test_dataloader=DataLoader,
         predict_dataloader=DataLoader,
+        file_invite_list=Dict,
     )
 ):
     data_module = Sat2RadDataModule(
@@ -39,9 +41,11 @@ def importer_sat2rad() -> (
     )
     data_module.prepare_data()
     data_module.setup(None)
+    file_invite_list = data_module.get_files()
     return (
         data_module.train_dataloader(),
         data_module.val_dataloader(),
         data_module.test_dataloader(),
         data_module.predict_dataloader(),
+        file_invite_list,
     )

@@ -30,6 +30,34 @@ def normalize_pixels_file(path: str) -> np.ndarray:
     return radarFile
 
 
+def binify(array):
+    class_counter = 0
+    array[array <= 0] = class_counter
+    class_counter += 1
+    for i in range(0, 60, 5):
+        array[(array > i) & (array <= i + 5)] = class_counter
+        class_counter += 1
+    array[array > 65] = class_counter
+    return array
+
+
+def bin_file(path: str) -> np.ndarray:
+    path = os.path.join(
+        settings.folder.save_path, path.replace(settings.folder.file_ext, ".npy")
+    )
+    radarFile = np.load(path)
+    # remove border
+    radarFile[radarFile >= settings.pixel_range[1]] = 0
+
+    # convert to dbz
+    radarFile = (radarFile * 0.5) - 32
+
+    # create bins
+    radarFile = binify(radarFile)
+
+    return radarFile
+
+
 def resize_file(path: str) -> np.ndarray:
     path = os.path.join(
         settings.folder.save_path, path.replace(settings.folder.file_ext, ".npy")
@@ -45,6 +73,12 @@ def rename(original: str) -> str:
     return os.path.join(
         settings.folder.save_path, original.replace(settings.folder.file_ext, "")
     )
+
+
+@step
+def create_bins(filenames: List[str]) -> None:
+    files = BindFiles(filenames, rename)
+    files.bind(bin_file, "saving the file as binned")
 
 
 @step

@@ -1,14 +1,14 @@
 [downloads]
-skip = false
+skip = true
 endpoint = 'https://ams3.digitaloceanspaces.com'
 region = 'ams3'
 bucket_name = 'infoplaza-data-scientist-m-bruder'
 digital_ocean = true
 directory = '../../../../../data'
 [downloads.range]
-all = true
-start = 2023-04-21T00:00:00Z
-end = 2023-06-21T23:00:00Z
+all = false
+start = 2023-04-01T00:00:00
+end = 2023-04-07T23:00:00
 
 [satellite]
 reader = "seviri_l1b_native"
@@ -32,8 +32,8 @@ save_path = "../../../../../data/preprocessed/satellite"
 file_ext = ".nat"
 
 [satellite.output_size]
-height = 166
-width = 134
+height = 256
+width = 256
 
 [satellite.reprojection]
 skip = false
@@ -51,5 +51,5 @@ original_path = "../../../../../data/radar"
 save_path = "../../../../../data/preprocessed/radar"
 file_ext = ".h5"
 [radar.output_size]
-height = 166
-width = 134
+height = 256
+width = 256

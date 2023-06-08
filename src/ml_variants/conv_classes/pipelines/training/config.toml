@@ -1,17 +1,17 @@
 [model]
-name = "sat2rad_convlstm"
+name = "Binned SAT2RAD"
 
 [model.input_size]
-height = 166
-width = 134
+height = 256
+width = 256
 channels = 11
 sequence_length = 5
 
 [model.output_size]
-height = 166
-width = 134
+height = 256
+width = 256
 channels = 1
-sequence_length = 12
+sequence_length = 1
 
 [model.encoder]
 kernel_size = [3,3]
@@ -31,7 +31,7 @@ optimizer = 'adam'
 
 
 [mlflow]
-experiment_name = "sat2rad_conv_lstm"
+experiment_name = "sat2rad_binned_convlstm"
 experiment_tracker = "Infoplaza MLFlow"
 
 
