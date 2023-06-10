@@ -2,14 +2,14 @@
 name = "sat2rad_convlstm"
 
 [model.input_size]
-height = 166
-width = 134
+height = 256
+width = 256
 channels = 11
 sequence_length = 5
 
 [model.output_size]
-height = 166
-width = 134
+height = 256
+width = 256
 channels = 1
 sequence_length = 12
 

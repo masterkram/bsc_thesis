@@ -27,6 +27,7 @@ import numpy as np
 import typed_settings as ts
 from Settings import ModelSettings, MlFlowSettings
 from util.log_utils import write_log, log_mlflow
+import torchmetrics
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
@@ -61,10 +62,10 @@ class Sat2Rad(pl.LightningModule):
         self.temporal_encoder = ConvLSTM(
             input_size=(256, 256),
             input_dim=11,
-            hidden_dim=[64, 64, 64],
+            hidden_dim=[64],
             kernel_size=(3, 3),
-            num_layers=3,
-            peephole=False,
+            num_layers=1,
+            peephole=True,
             batchnorm=False,
             batch_first=True,
             activation=F.tanh,
@@ -75,11 +76,30 @@ class Sat2Rad(pl.LightningModule):
             nn.ReLU(),
             nn.Conv2d(32, 16, (3, 3), 1, "same"),
             nn.ReLU(),
-            nn.Conv2d(16, 13, (3, 3), 1, "same"),
+            nn.Conv2d(16, 14, (3, 3), 1, "same"),
             nn.Softmax2d(),
         )
-
-        self.loss_fn = nn.CrossEntropyLoss()
+        weights = torch.tensor(
+            [
+                0.0001,
+                0.001,
+                0.002,
+                0.003,
+                0.004,
+                0.009,
+                0.01,
+                0.01,
+                0.04,
+                0.05,
+                0.12,
+                0.15,
+                0.2,
+                0.4009,
+            ]
+        )
+        self.loss_fn = nn.CrossEntropyLoss(weight=weights)
+        self.iou = torchmetrics.JaccardIndex("multiclass", num_classes=14)
+        self.accuracy = torchmetrics.Accuracy("multiclass", num_classes=14)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -87,32 +107,44 @@ class Sat2Rad(pl.LightningModule):
         y_hat = self(batch)
         print("size check y = ", y.size(), "y_hat =", y_hat.size())
 
-        # y_hat = torch.argmax(y_hat, 1)
+        loss = self.loss_fn(y_hat, y)
 
-        loss = self.loss_fn(y_hat, y[0])
+        self.log("train_loss", loss, on_epoch=True)
+        self.iou(y_hat, y)  # compute metrics
+        self.log("train_iou_step", self.iou)  # log metric object
 
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+        self.accuracy(y_hat, y)  # compute metrics
+        self.log("train_acc_step", self.accuracy)  # log metric object
 
         return loss
 
     def validation_step(self, batch, batch_idx):
         _, y = batch
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y[0])
-        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+        print("size check y = ", y.size(), "y_hat =", y_hat.size())
+        loss = self.loss_fn(y_hat, y)
+        self.log("val_loss", loss, on_epoch=True)
+        self.iou(y_hat, y)  # compute metrics
+        self.log("val_iou_step", self.iou)  # log metric object
+        self.accuracy(y_hat, y)  # compute metrics
+        self.log("train_acc_step", self.accuracy)  # log metric object
 
     def test_step(self, batch, batch_idx):
         _, y = batch
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y[0])
-        self.log("test_loss", loss, on_epoch=True, prog_bar=True)
+        loss = self.loss_fn(y_hat, y)
+        self.log("test_loss", loss, on_epoch=True)
+        self.iou(y_hat, y)
+        self.log("test_iou_step", self.iou)
+        self.accuracy(y_hat, y)  # compute metrics
+        self.log("train_acc_step", self.accuracy)  # log metric object
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters())
         return optimizer
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        return self(batch)
+        return torch.argmax(self(batch), 1)
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, _ = batch

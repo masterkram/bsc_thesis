@@ -24,10 +24,13 @@ def normalize_pixels_file(path: str) -> np.ndarray:
         settings.folder.save_path, path.replace(settings.folder.file_ext, ".npy")
     )
     radarFile = np.load(path)
-    radarFile[radarFile >= settings.pixel_range[1]] = 0
-    rescaleRatio = 1 / (settings.pixel_range[1] - settings.pixel_range[0])
-    radarFile = radarFile * rescaleRatio
-    return radarFile
+
+    # radarFile[radarFile >= settings.pixel_range[1]] = 0
+    # rescaleRatio = 1 / (settings.pixel_range[1] - settings.pixel_range[0])
+    # radarFile = radarFile * rescaleRatio
+    maxes = (settings.pixel_range[1] * 0.5) - 32
+    mins = (settings.pixel_range[0] * 0.5) - 32
+    return min_max_scale(radarFile, maxes, mins)
 
 
 def binify(array):
@@ -46,11 +49,6 @@ def bin_file(path: str) -> np.ndarray:
         settings.folder.save_path, path.replace(settings.folder.file_ext, ".npy")
     )
     radarFile = np.load(path)
-    # remove border
-    radarFile[radarFile >= settings.pixel_range[1]] = 0
-
-    # convert to dbz
-    radarFile = (radarFile * 0.5) - 32
 
     # create bins
     radarFile = binify(radarFile)
@@ -59,14 +57,23 @@ def bin_file(path: str) -> np.ndarray:
 
 
 def resize_file(path: str) -> np.ndarray:
-    path = os.path.join(
+    path1 = os.path.join(
         settings.folder.save_path, path.replace(settings.folder.file_ext, ".npy")
     )
-    radarFile = np.load(path)
+    path2 = os.path.join(
+        settings.save_path_bins, path.replace(settings.folder.file_ext, ".npy")
+    )
+
+    radarFile = np.load(path1)
+    radarFileBinned = np.load(path2)
+
     resizeRadar = cv2.resize(
         radarFile, (settings.output_size.width, settings.output_size.height)
     )
-    return resizeRadar
+    resizeRadarBinned = cv2.resize(
+        radarFileBinned, (settings.output_size.width, settings.output_size.height)
+    )
+    return resizeRadar, resizeRadarBinned
 
 
 def rename(original: str) -> str:
@@ -75,10 +82,40 @@ def rename(original: str) -> str:
     )
 
 
+def renameBins(original: str) -> str:
+    return os.path.join(
+        settings.save_path_bins, original.replace(settings.folder.file_ext, "")
+    )
+
+
+def dbz(path: str) -> np.ndarray:
+    path = os.path.join(
+        settings.folder.save_path, path.replace(settings.folder.file_ext, ".npy")
+    )
+    array = np.load(path)
+    # clear mask
+    array[array >= settings.pixel_range[1]] = 0
+    # convert to dbz
+    return (array * 0.5) - 32
+
+
+def min_max_scale(x, maxes, mins):
+    """
+    Scale a numpy array between 0 and 1
+    """
+    return (x - mins) / (maxes - mins)
+
+
 @step
 def create_bins(filenames: List[str]) -> None:
-    files = BindFiles(filenames, rename)
+    files = BindFiles(filenames, renameBins)
     files.bind(bin_file, "saving the file as binned")
+
+
+@step
+def to_dbz(filenames: List[str]) -> None:
+    files = BindFiles(filenames, rename)
+    files.bind(dbz, "converting to dbz")
 
 
 @step
@@ -95,8 +132,10 @@ def normalize_radar_pixels(filenames: List[str]) -> None:
 
 @step
 def resize_radar_files(filenames: List[str]) -> None:
-    files = BindFiles(filenames, rename)
-    files.bind(resize_file)
+    for file in filenames:
+        normal, binned = resize_file(file)
+        np.save(rename(file), normal)
+        np.save(renameBins(file), binned)
 
 
 @step

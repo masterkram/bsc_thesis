@@ -24,7 +24,6 @@ class ModelSettings:
     input_size: Shape
     output_size: Shape
     encoder: ConvLSTMSettings
-    decoder: ConvLSTMSettings
 
 
 @ts.settings

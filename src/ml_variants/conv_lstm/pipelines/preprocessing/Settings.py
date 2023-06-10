@@ -37,6 +37,7 @@ class SatelliteSettings:
 class RadarSettings:
     parameter: str
     pixel_range: List
+    save_path_bins: str
     folder: FolderSettings
     output_size: Dimension
 

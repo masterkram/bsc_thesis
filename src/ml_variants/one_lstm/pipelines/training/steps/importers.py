@@ -15,6 +15,7 @@ sys.path.append("../../../../")
 sys.path.append("../../../../lib/data_loaders")
 
 from lib.data_loaders.Sat2RadModule import Sat2RadDataModule
+from lib.data_loaders.DatasetType import DatasetType
 from Settings import ModelSettings
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
@@ -37,7 +38,8 @@ def importer_sat2rad() -> (
         batch_size=1,
         sequence_len_satellite=settings.input_size.sequence_length,
         sequence_len_radar=settings.output_size.sequence_length,
-        splits={"train": 0.8, "val": 0.1, "test": 0.1},
+        splits={"train": 0.7, "val": 0.2, "test": 0.1},
+        dataset_type=DatasetType.Sequence,
     )
     data_module.prepare_data()
     data_module.setup(None)

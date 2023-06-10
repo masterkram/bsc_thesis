@@ -27,6 +27,7 @@ import numpy as np
 import typed_settings as ts
 from Settings import ModelSettings, MlFlowSettings
 from util.log_utils import write_log, log_mlflow
+import numpy as np
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
@@ -50,6 +51,23 @@ def weight_function(target):
     return result
 
 
+SAVE_FOLDER = "../../../../../logs/"
+
+
+def save_viz(
+    image: np.ndarray, active_experiment_name: str, pred: bool = True, batch_ix=0
+):
+    image = np.reshape(image, (256, 256))
+    plt.imshow(image)
+
+    # save the plot
+    save_type = "pred" if pred else "gt"
+    save_path = (
+        f"{SAVE_FOLDER}experiment-{active_experiment_name}-{save_type}-{batch_ix}.png"
+    )
+    plt.savefig(save_path, dpi=300)
+
+
 def balanced_mae(output, target):
     return torch.mean(torch.abs((target - output) * weight_function(target)))
 
@@ -59,35 +77,36 @@ class Sat2Rad(pl.LightningModule):
         super().__init__()
 
         self.temporal_encoder = ConvLSTM(
-            input_size=(166, 134),
-            input_dim=11,
-            hidden_dim=[64, 64, 64],
-            kernel_size=(3, 3),
-            num_layers=3,
+            input_size=(settings.input_size.height, settings.input_size.width),
+            input_dim=settings.input_size.channels,
+            hidden_dim=[
+                settings.encoder.filters for _ in range(settings.encoder.layers)
+            ],
+            kernel_size=tuple(settings.encoder.kernel_size),
+            num_layers=settings.encoder.layers,
             peephole=True,
             batchnorm=False,
             batch_first=True,
-            activation=F.tanh,
+            activation=F.relu,
         )
 
-        self.position_embedding = AxialPositionalEmbedding(
-            dim=64, shape=(166 // 4, 134 // 4)
+        self.head = nn.Sequential(
+            nn.Conv2d(128, 64, kernel_size=(3, 3), padding="same"),
+            nn.Conv2d(64, 32, kernel_size=(3, 3), padding="same"),
+            nn.Conv2d(32, 16, kernel_size=(3, 3), padding="same"),
+            nn.Conv2d(16, 1, kernel_size=(3, 3), padding="same"),
         )
 
-        self.spatial_aggregator = nn.Sequential(
-            AxialAttention(dim=64, dim_index=1, heads=8, num_dimensions=2)
-        )
-
-        self.head = nn.Conv2d(64, 1, kernel_size=(1, 1))
-
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.L1Loss()
 
     def training_step(self, batch, batch_idx):
         x, y = batch
 
         y_hat = self(batch)
-        print("size check y = ", y.size(), "y_hat =", y_hat.size())
         loss = self.loss_fn(y_hat, y[0])
+
+        # sanity check visualisation
+        # save_viz(y_hat.detach().cpu().numpy(), "booya", True, batch_idx)
 
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
 
@@ -118,11 +137,8 @@ class Sat2Rad(pl.LightningModule):
             batch_size=1, device=self.device
         )
         temporal_encoded, state = self.temporal_encoder(x, hidden_state)
-        # embedded = self.position_embedding(temporal_encoded)
-        # print(embedded.size())
-        aggregated = self.spatial_aggregator(temporal_encoded)
 
-        y_hat = self.head(aggregated)
+        y_hat = self.head(temporal_encoded[:, -1, :, :, :])
 
         return y_hat
 
@@ -136,7 +152,9 @@ def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Modu
     write_log(f"training {settings.name}")
     model = Sat2Rad()
 
-    trainer = pl.Trainer(max_epochs=5)
+    trainer = pl.Trainer(
+        max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
+    )
 
     mlflow.pytorch.autolog()
 

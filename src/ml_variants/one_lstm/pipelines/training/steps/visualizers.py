@@ -57,9 +57,13 @@ def visualize(
     gt_files = file_list["test"]["rad"]
     print(result[0].size())
     example_radar_sequence = (
-        result[0][sample_output, :, :, :].view(166, 134).detach().numpy()
+        result[0][sample_output, :, :].view(256, 256).detach().numpy()
     )
-    all_predictions = result[0].detach().numpy()
+    # print(len(result), "amount of results") => 11
+    print(len(result[0]), "len result 0")
+    all_predictions = [
+        x[sample_output, :, :].view(256, 256).detach().numpy() for x in result
+    ]
 
     ground_truth = [np.load(x) for x in gt_files]
     example_radar_sequence_gt = ground_truth[sample_output]
@@ -67,7 +71,9 @@ def visualize(
     save_viz(example_radar_sequence, active_experiment_name)
     save_viz(example_radar_sequence_gt, active_experiment_name, False)
 
+    print("here")
     make_gif(all_predictions)
-    make_gif(ground_truth)
+    # make_gif(ground_truth)
+    print("teher")
 
     return example_radar_sequence

@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 from Sat2RadDataset import Sat2RadDataset
+import math
+from util.parse_time import get_next_sequence
 
 
 class Sat2RadDatasetSequence(Sat2RadDataset):
@@ -21,7 +23,7 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         seq_amount_rad = (self.rad_len - self.satellite_seq_len * 3 - 4) // (
             3 * self.satellite_seq_len
         )
-        return min(seq_amount_sat, seq_amount_rad)
+        return min(seq_amount_sat, seq_amount_rad) - 1
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
@@ -30,8 +32,11 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         upper_bound_satellite = (index + 1) * self.satellite_seq_len
 
         # beginning of the day has 2 extra images before satellite image
-        lower_bound_radar = upper_bound_satellite * 3 + 2
-        upper_bound_radar = lower_bound_radar + self.radar_seq_len
+        lower_bound_radar, upper_bound_radar = get_next_sequence(
+            self.radar_seq_len,
+            self.satellite_files[upper_bound_satellite],
+            self.radar_files,
+        )
 
         satellite_sequence = [
             np.load(file)
@@ -50,4 +55,4 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         X = torch.from_numpy(satellite_sequence)
         y = torch.from_numpy(radar_sequence)
 
-        return X.float(), y.long()
+        return X.float(), y.float()
