@@ -12,8 +12,18 @@ def preprocessing_pipeline():
     sat.get_satellite_stats.after(sat.reproject_satellite)
     sat.satellite_pixel_normalization.after(sat.get_satellite_stats)
 
-    rad.normalize_radar_pixels.after(rad.convert_radar_to_numpy)
-    rad.resize_radar_files.after(rad.normalize_radar_pixels)
+    """
+    radar setup:
+    1. to dbz
+    2. to bins
+    3. resize
+    4. normalize
+    """
+    rad.to_dbz.after(rad.convert_radar_to_numpy)
+    rad.create_bins.after(rad.to_dbz)
+    rad.resize_radar_files.after(rad.create_bins)
+    rad.normalize_radar_pixels.after(rad.resize_radar_files)
+
     sat.visualize_satellite.after(sat.satellite_pixel_normalization)
     rad.visualize_radar.after(rad.resize_radar_files)
 
@@ -28,8 +38,11 @@ def preprocessing_pipeline():
 
     # radar data
     rad.convert_radar_to_numpy(radar_images)
-    rad.normalize_radar_pixels(radar_images)
+    rad.to_dbz(radar_images)
+    rad.create_bins(radar_images)
     rad.resize_radar_files(radar_images)
+    rad.normalize_radar_pixels(radar_images)
+
     # visualize the data.
     sat.visualize_satellite(satellite_images)
     rad.visualize_radar(radar_images)

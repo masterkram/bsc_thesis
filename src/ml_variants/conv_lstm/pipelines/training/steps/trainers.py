@@ -3,7 +3,7 @@ from typing import Any, Optional
 from lightning.pytorch.utilities.types import STEP_OUTPUT
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
-sys.path.append("../../")
+sys.path.append("../../../../")
 
 from zenml import step
 from torch import nn
@@ -196,7 +196,7 @@ class Sat2Rad(pl.LightningModule):
         self.encoder_radar = ConvEncoderRadar()
 
         # self.loss_fn = nn.MSELoss()
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = balanced_mae
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -336,7 +336,7 @@ def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Modu
     # trainer = pl.Trainer(
     #     max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
     # )
-    trainer = pl.Trainer(max_epochs=100)
+    trainer = pl.Trainer(max_epochs=1)
 
     mlflow.pytorch.autolog()
 

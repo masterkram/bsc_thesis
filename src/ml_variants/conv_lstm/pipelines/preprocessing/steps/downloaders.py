@@ -29,16 +29,23 @@ def download_data() -> None:
     """
     # check if necessary
     if not downloadSettings.skip:
-        bucketService = BucketService()
-        bucketService.getFiles()
+        bucketService = BucketService(data_folder_path=downloadSettings.directory)
+        files = bucketService.getFiles()
+        write_log(f"downloading {len(files)} files :checkered_flag:")
         time_span = (downloadSettings.range.start, downloadSettings.range.end)
-        bucketService.downloadFilesInRange(time_span=time_span)
+        if downloadSettings.range.all:
+            write_log("downloading all files :folded_hands:")
+            bucketService.downloadAllFiles(loadBar=True)
+        else:
+            write_log(f"downloading file in range {time_span} :four_o’clock:")
+            bucketService.downloadFilesInRange(time_span=time_span, loadBar=True)
         unzip()
     else:
-        write_log("downloads skipped")
+        write_log("downloads skipped :floppy_disk:")
 
 
 def unzip() -> None:
+    write_log("extracting zip files :zipper-mouth_face:")
     path = satSettings.folder.original_path
     zips = os.listdir(path)
 
@@ -58,5 +65,5 @@ def unzip() -> None:
     files = os.listdir(path)
     for file in files:
         if not file.endswith(satSettings.folder.file_ext):
-            print("removing")
+            write_log(f"removing unused file: {file} :broom:")
             os.remove(f"{path}/{file}")

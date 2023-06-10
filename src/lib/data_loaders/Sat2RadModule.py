@@ -5,12 +5,15 @@ import os
 from typing import Type
 from DatasetType import DatasetType
 from DatasetSlidingWindow import Sat2RadDatasetSlidingWindow
-from DatasetDistributor import DatasetDistributor
+from DatasetDistributor import DatasetDistributor, DatasetDistributorCombined
 from Sat2RadDataset import Sat2RadDataset
 from DatasetSequence import Sat2RadDatasetSequence
+from ClassDatasetSequence import ClassDatasetSequence
 from rich import table
+from typing import List, Dict, Tuple
+from rich.table import Table
 
-from util.parse_time import order_based_on_file_timestamp
+from util.parse_time import order_based_on_file_timestamp, parseTime, find_matching_time
 from util.log_utils import write_log
 
 
@@ -29,6 +32,8 @@ class Sat2RadDataModule(pl.LightningDataModule):
         sequence_len_radar: int = 12,
         batch_size: int = 1,
         splits: dict = {"train": 0.6, "val": 0.2, "test": 0.2},
+        dataset_type: DatasetType = DatasetType.Sequence,
+        regression=True,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -42,7 +47,8 @@ class Sat2RadDataModule(pl.LightningDataModule):
                 transforms.ToTensor(),
             ]
         )
-        self.dataset_type = DatasetType.Sequence
+        self.dataset_type = dataset_type
+        self.regression = regression
 
     def load_with_full_path(self, path: str):
         load_dir = f"{self.data_dir}/preprocessed/{path}"
@@ -50,80 +56,149 @@ class Sat2RadDataModule(pl.LightningDataModule):
         return list(map(lambda x: f"{load_dir}/{x}", files))
 
     def ordered_files(self):
+        radarPath = "radar" if self.regression else "radar-binned"
+
         sat = order_based_on_file_timestamp(self.load_with_full_path("satellite"))
-        rad = order_based_on_file_timestamp(self.load_with_full_path("radar"))
+        rad = order_based_on_file_timestamp(self.load_with_full_path(radarPath))
+
+        # remove extra files from satellite:
+        lastRadar = parseTime(rad[-1])
+        lastSatellite = parseTime(sat[-1])
+
+        lastDate = min(lastRadar, lastSatellite)
+        lastTimeMatch = find_matching_time(sat, lastDate)
+
+        sat = sat[0:lastTimeMatch]
+
         return sat, rad
 
     def get_dataset(self) -> Type[Sat2RadDataset]:
         match self.dataset_type:
             case DatasetType.SlidingWindow:
                 return Sat2RadDatasetSlidingWindow
+            case DatasetType.Sequence:
+                return Sat2RadDatasetSequence
+            case DatasetType.ClassSequence:
+                return ClassDatasetSequence
             case _:
                 return Sat2RadDatasetSequence
 
     def setup(self, stage: str):
-        sat, rad = self.ordered_files()
+        self.sat, self.rad = self.ordered_files()
 
-        amount_of_satellite_files = len(sat)
-        amount_of_radar_files = len(rad)
+        amount_of_satellite_files = len(self.sat)
+        amount_of_radar_files = len(self.rad)
 
-        satdst = DatasetDistributor(
-            file_quantity=amount_of_satellite_files, splits=list(self.splits.values())
+        combinedDatasetDistributor = DatasetDistributorCombined(
+            amount_of_satellite_files,
+            amount_of_radar_files,
+            splits=list(self.splits.values()),
         )
-        raddst = DatasetDistributor(
-            file_quantity=amount_of_radar_files, splits=list(self.splits.values())
-        )
 
-        train_satellite_files = get_files_in_range(sat, next(satdst))
-        train_radar_files = get_files_in_range(rad, next(raddst))
-        val_satellite_files = get_files_in_range(sat, next(satdst))
-        val_radar_files = get_files_in_range(rad, next(raddst))
-        test_satellite_files = get_files_in_range(sat, next(satdst))
-        test_radar_files = get_files_in_range(rad, next(raddst))
+        train = next(combinedDatasetDistributor)
+        val = next(combinedDatasetDistributor)
+        test = next(combinedDatasetDistributor)
 
-        t = table.Table(title="Partitioned Files")
-        t.add_column("split", style="magenta")
-        t.add_column("satellite", justify="right", style="green")
-        t.add_column("radar", justify="right", style="cyan")
-        t.add_row(
-            "training", str(len(train_satellite_files)), str(len(train_radar_files))
-        )
-        t.add_row(
-            "validation", str(len(val_satellite_files)), str(len(val_radar_files))
-        )
-        t.add_row("testing", str(len(test_satellite_files)), str(len(test_radar_files)))
+        self.train_satellite_files = get_files_in_range(self.sat, train[0])
+        self.train_radar_files = get_files_in_range(self.rad, train[1])
+        self.val_satellite_files = get_files_in_range(self.sat, val[0])
+        self.val_radar_files = get_files_in_range(self.rad, val[1])
+        self.test_satellite_files = get_files_in_range(self.sat, test[0])
+        self.test_radar_files = get_files_in_range(self.rad, test[1])
 
-        write_log(t)
+        write_log(self.table(train, val, test))
 
         DataSet = self.get_dataset()
 
         # training datasets
         self.train = DataSet(
-            satellite_files=train_satellite_files,
-            radar_files=train_radar_files,
+            satellite_files=self.train_satellite_files,
+            radar_files=self.train_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
         self.validate = DataSet(
-            satellite_files=val_satellite_files,
-            radar_files=val_radar_files,
+            satellite_files=self.val_satellite_files,
+            radar_files=self.val_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
         # test dataset
         self.test = DataSet(
-            satellite_files=test_satellite_files,
-            radar_files=test_radar_files,
+            satellite_files=self.test_satellite_files,
+            radar_files=self.test_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
         # prediction dataset
         self.predict = DataSet(
-            satellite_files=test_satellite_files,
-            radar_files=test_radar_files,
+            satellite_files=self.test_satellite_files,
+            radar_files=self.test_radar_files,
             satellite_seq_len=self.sequence_len_satellite,
             radar_seq_len=self.sequence_len_radar,
         )
+
+    def table(
+        self, train: Tuple[int, int], val: Tuple[int, int], test: Tuple[int, int]
+    ) -> Table:
+        table = Table(title="Partitioned Files")
+
+        table.add_column("Start Date Sat", justify="right", style="cyan")
+        table.add_column("End Date Sat", justify="right", style="cyan")
+        table.add_column("Start Date Rad", justify="right", style="cyan")
+        table.add_column("End Date Rad", justify="right", style="cyan")
+        table.add_column("Partition", style="magenta")
+        table.add_column("Files Satellite", justify="right", style="green")
+        table.add_column("Files Radar", justify="right", style="green")
+
+        table.add_row(
+            str(parseTime(self.sat[0])),
+            str(parseTime(self.sat[-1])),
+            str(parseTime(self.rad[0])),
+            str(parseTime(self.rad[-1])),
+            "All",
+            str(len(self.sat)),
+            str(len(self.rad)),
+        )
+
+        table.add_row(
+            str(parseTime(self.sat[train[0][0]])),
+            str(parseTime(self.sat[train[0][1]])),
+            str(parseTime(self.rad[train[1][0]])),
+            str(parseTime(self.rad[train[1][1]])),
+            "Training",
+            str(len(self.sat[train[0][0] : train[0][1]])),
+            str(len(self.rad[train[1][0] : train[1][1]])),
+        )
+        table.add_row(
+            str(parseTime(self.sat[val[0][0]])),
+            str(parseTime(self.sat[val[0][1]])),
+            str(parseTime(self.rad[val[1][0]])),
+            str(parseTime(self.rad[val[1][1]])),
+            "Validation",
+            str(len(self.sat[val[0][0] : val[0][1]])),
+            str(len(self.rad[val[1][0] : val[1][1]])),
+        )
+        table.add_row(
+            str(parseTime(self.sat[test[0][0]])),
+            str(parseTime(self.sat[test[0][1]])),
+            str(parseTime(self.rad[test[1][0]])),
+            str(parseTime(self.rad[test[1][1]])),
+            "Testing",
+            str(len(self.sat[test[0][0] : test[0][1]])),
+            str(len(self.sat[test[1][0] : test[1][0]])),
+        )
+        return table
+
+    def get_files(self) -> Dict:
+        return {
+            "training": {
+                "sat": self.train_satellite_files,
+                "rad": self.train_radar_files,
+            },
+            "valid": {"sat": self.val_satellite_files, "rad": self.val_radar_files},
+            "test": {"sat": self.test_satellite_files, "rad": self.test_radar_files},
+        }
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size)

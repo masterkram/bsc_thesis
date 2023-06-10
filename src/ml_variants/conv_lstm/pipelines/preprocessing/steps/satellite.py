@@ -121,8 +121,9 @@ def rename(original: str):
 
 @step
 def reproject_satellite(filenames: List[str]) -> None:
-    satFiles = BindFiles(filenames, rename)
-    satFiles.bind(reproject_sat_file, desc="reprojecting radar")
+    if False:
+        satFiles = BindFiles(filenames, rename)
+        satFiles.bind(reproject_sat_file, desc="reprojecting radar")
 
 
 @step
@@ -132,8 +133,9 @@ def satellite_pixel_normalization(
     """
     zenml step to normalize pixels.
     """
-    satFiles = BindFiles(filenames, rename)
-    satFiles.bind(get_scaler_function(stats), desc="normalize pixel values")
+    if False:
+        satFiles = BindFiles(filenames, rename)
+        satFiles.bind(get_scaler_function(stats), desc="normalize pixel values")
 
 
 @step
