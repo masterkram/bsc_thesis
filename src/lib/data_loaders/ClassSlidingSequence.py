@@ -27,17 +27,14 @@ class ClassDatasetSlidingWindow(Sat2RadDataset):
         radar_seq_len: int = 12,
     ):
         super().__init__(
-            satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
+            satellite_files,
+            radar_files,
+            "",
+            [],
+            satellite_seq_len,
+            radar_seq_len,
+            stride=True,
         )
-        lastPrediction = self.radar_files[(self.rad_len - 1) - (self.radar_seq_len - 1)]
-        lastInput = find_matching_string(self.satellite_files, lastPrediction)
-        if lastInput is None:
-            lastPrediction = self.radar_files[
-                (self.rad_len - 1) - (self.radar_seq_len - 1) - 1
-            ]
-            lastInput = find_matching_string(self.satellite_files, lastPrediction)
-
-        self.length = lastInput // self.satellite_seq_len - 1
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
