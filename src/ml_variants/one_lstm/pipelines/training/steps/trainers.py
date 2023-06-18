@@ -28,6 +28,7 @@ import typed_settings as ts
 from Settings import ModelSettings, MlFlowSettings
 from util.log_utils import write_log, log_mlflow
 import numpy as np
+from datetime import datetime
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
@@ -54,18 +55,23 @@ def weight_function(target):
 SAVE_FOLDER = "../../../../../logs/"
 
 
-def save_viz(
-    image: np.ndarray, active_experiment_name: str, pred: bool = True, batch_ix=0
-):
-    image = np.reshape(image, (256, 256))
-    plt.imshow(image)
+def save_viz(image: np.ndarray, gt: np.ndarray, sat: np.ndarray, idx):
+    fig, axes = plt.subplots(2, 5)
+    for i, a in enumerate(axes[0]):
+        a.imshow(sat[i][0])
+    # for i, a in enumerate(axes[1]):
+    #     a.set_title("timestamp")
+    #     a.imshow(radar[i])
+    axes[-1, 0].set_title("ground truth")
+    axes[-1, 0].imshow(gt)
+    axes[-1, 1].axis("off")
+    axes[-1, 2].axis("off")
+    axes[-1, 3].axis("off")
+    axes[-1, -1].set_title("prediction")
+    axes[-1, -1].imshow(image)
 
-    # save the plot
-    save_type = "pred" if pred else "gt"
-    save_path = (
-        f"{SAVE_FOLDER}experiment-{active_experiment_name}-{save_type}-{batch_ix}.png"
-    )
-    plt.savefig(save_path, dpi=300)
+    save_path = f"{SAVE_FOLDER}experiment-{idx}.png"
+    fig.savefig(save_path, dpi=300)
 
 
 def balanced_mae(output, target):
@@ -78,35 +84,29 @@ class Sat2Rad(pl.LightningModule):
 
         self.temporal_encoder = ConvLSTM(
             input_size=(settings.input_size.height, settings.input_size.width),
-            input_dim=settings.input_size.channels,
-            hidden_dim=[
-                settings.encoder.filters for _ in range(settings.encoder.layers)
-            ],
-            kernel_size=tuple(settings.encoder.kernel_size),
-            num_layers=settings.encoder.layers,
+            input_dim=11,
+            hidden_dim=[64],
+            kernel_size=(5, 5),
+            num_layers=1,
             peephole=True,
             batchnorm=False,
             batch_first=True,
-            activation=F.relu,
+            activation=F.tanh,
         )
 
         self.head = nn.Sequential(
-            nn.Conv2d(128, 64, kernel_size=(3, 3), padding="same"),
-            nn.Conv2d(64, 32, kernel_size=(3, 3), padding="same"),
-            nn.Conv2d(32, 16, kernel_size=(3, 3), padding="same"),
-            nn.Conv2d(16, 1, kernel_size=(3, 3), padding="same"),
+            nn.Conv2d(64, 32, kernel_size=(5, 5), padding="same"),
+            nn.Conv2d(32, 16, kernel_size=(5, 5), padding="same"),
+            nn.Conv2d(16, 1, kernel_size=(5, 5), padding="same"),
         )
 
-        self.loss_fn = nn.L1Loss()
+        self.loss_fn = nn.MSELoss()
 
     def training_step(self, batch, batch_idx):
         x, y = batch
 
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y[0])
-
-        # sanity check visualisation
-        # save_viz(y_hat.detach().cpu().numpy(), "booya", True, batch_idx)
+        loss = self.loss_fn(y_hat, y)
 
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
 
@@ -115,13 +115,13 @@ class Sat2Rad(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         _, y = batch
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y[0])
+        loss = self.loss_fn(y_hat, y)
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         _, y = batch
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y[0])
+        loss = self.loss_fn(y_hat, y)
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
@@ -133,8 +133,13 @@ class Sat2Rad(pl.LightningModule):
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, _ = batch
+
+        # x = x.contiguous().view(-1, 11, 256, 256)
+        # x = self.cnn_encoder(x).view(2, 5, 64, 256, 256)
+        batch_size = x.size(0)
+
         hidden_state = self.temporal_encoder.get_init_states(
-            batch_size=1, device=self.device
+            batch_size=batch_size, device=self.device
         )
         temporal_encoded, state = self.temporal_encoder(x, hidden_state)
 
@@ -152,9 +157,7 @@ def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Modu
     write_log(f"training {settings.name}")
     model = Sat2Rad()
 
-    trainer = pl.Trainer(
-        max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
-    )
+    trainer = pl.Trainer(max_epochs=settings.max_epochs)
 
     mlflow.pytorch.autolog()
 

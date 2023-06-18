@@ -16,12 +16,15 @@
   \providecommand\BibTeX{{%
     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
 
-\setcopyright{acmcopyright}
+\setcopyright{cc}
 \copyrightyear{2023}
 \acmYear{2023}
 
 \acmConference[TScIT 39]{39$^{th}$ Twente Student Conference on IT}{July 8,
   2023}{Enschede, The Netherlands}
+
+\acmCodeLink{https://github.com/repository/code}
+
 
 \begin{document}
 
@@ -49,8 +52,8 @@ The forecasting of rain is a complex problem with centuries of scientific work. 
 \settopmatter{printacmref=false}
 
 \begin{teaserfigure}
-  \includegraphics*[width=\textwidth, trim= 0in 0.0in 0in 16.0in]{images/lightning.jpg}
-  \caption{A supercell thunderstorm at twilight in SW Oklahoma.^1}
+  \includegraphics*[width=\textwidth, trim=0in 0.0in 0in 16.0in]{images/lightning.jpg}
+  \caption{A supercell thunderstorm at twilight in SW Oklahoma.}
   \Description{A supercell thunderstorm at twilight in SW Oklahoma.}
   \label{fig:teaser}
 \end{teaserfigure}
@@ -145,22 +148,36 @@ For the machine learning aspect of this research it is important to understand m
 
 To have an understanding of the meteorological context of this project it is recommended to have an understanding of radar data \cite{rinehart1991radar}, satellite data specifically the kind used in this project \cite{schmid-no-date}.
 
-\section{Methods}
+\section{Methodology}
+We choose to structure our project based on the CRISP-DM framework.
 
-% Can also be a new way to solve the problem or a hybrid method (mixed strategy, etc..). In this case, it would be nice to see a description of the steps which are followed in order to solve the problem.
+\subsection{Business and Data Understanding}
+From a business perspective the data.
 
-In this section we will discuss how we will approach the answering of our research questions.
-\medskip
+\subsection{Data Preprocessing}
 
-In our first and second sub-research questions we will perform a more comprehensive literature review to elicit the necessary methods that are required to create and evaluate the  model for example: suitable loss functions from \textit{superzoom} studies, metrics which are suitable for meteorological applications and methods to perform evaluations. These insights will be necessary to the work in sub-research questions 3 and 4.
-\medskip
+\begin{figure}
+  \centering
+  \includegraphics[width=225pt]{./images/preprocessing.png}
+  \caption{Preprocessing Pipeline}
+  \Description{Satellite Image of the earth}
+  \label{fig:preprocessing}
+\end{figure}
 
-To answer our third sub-research question, we foresee to create a baseline model with a Convolutional LSTM architecture, if this succeeds we will expand this network by adding convolutions for spatial downsampling and axial attention in order to improve the accuracy of our model as done in \cite{sønderby2020metnet}.
-\medskip
+satellite data
 
-To answer the final sub-research question, we will evaluate the model to identify the suitability of our trained model in different meteorological situations.
+radar data
 
-\section{Expected Results}
+Issue during data cleaning was missing radar data.
+
+\subsection{Training}
+Using pytorch, pytorch ligthing, zenml, mlflow
+
+\subsection{Performance Evaluation}
+
+
+
+\section{Results}
 
 \subsection{Data}
 
@@ -173,14 +190,15 @@ Additionally we have obtained satellite data from \textsc{EUMETSAT} at a \texttt
 
 \begin{figure}
     \centering
-    \includegraphics[width=225]{report/images/infrared.png}
-    \caption{Satellite Image: Infrared Channel 18UTC 12.0\mu m}
+    \includegraphics[width=225pt]{./images/infrared.png}
+    \caption{Satellite Image: Infrared Channel 18UTC $12.0\mu m$}
+    \Description{Satellite Image of the earth}
     \label{fig:infra}
 \end{figure}
 
 \subsubsection{Data Cleaning} \textit{UMAP} \cite{mcinnes2020umap} will be used to cluster the data from the satellite and radar to find outliers and potential data imbalances.
 
-\subsubsection{Preprocessing Details} Several options exist for preprocessing of the data. One could reproject the satellite images to match the area and geographic projection of the radar images, however this requires heavy computation and studies such as \cite{sønderby2020metnet} have shown the importance of the context (i.e data from outside the region of interest) for the predictions. We will preprocess our satellite images by cropping them to a smaller dimension to reduce the required parameters of the model, with padding outside the area of interest. We will standardize the pixel data from all images to floating point data between \texttt{0} and \textt{1}.
+\subsubsection{Preprocessing Details} Several options exist for preprocessing of the data. One could reproject the satellite images to match the area and geographic projection of the radar images, however this requires heavy computation and studies such as \cite{sønderby2020metnet} have shown the importance of the context (i.e data from outside the region of interest) for the predictions. We will preprocess our satellite images by cropping them to a smaller dimension to reduce the required parameters of the model, with padding outside the area of interest. We will standardize the pixel data from all images to floating point data between \texttt{0} and \texttt{1}.
 
 \subsection{Implementation Details}
 
@@ -231,40 +249,13 @@ The input and output data will be the full data as discussed in the data section
     \item Evaluate the best performing model by running it over a month of data, and analyse the performance by performing aggregations of the predicted data and the ground truth.
 \end{enumerate}
 
-\section{Time Planning}
-In this section we discuss our planning for the execution of the study in this proposal. In the \textit{gantt} chart you can see that we begin by getting a go for the proposal. Then we start by answering sub-research question 1 and 2 then we proceed by answering sub-research question 3 and finally we bring the research to a close with sub-research question 4.
-
-\medskip
-
-\begin{ganttchart}[hgrid,vgrid,
-bar/.append style={fill=blue!50},
-group/.append style={draw=black, fill=gray!50},
-milestone/.append style={fill=yellow!50, rounded corners=3pt}]{1}{11}
-  \gantttitle{\textbf{Planning Table}}{11} \\
-  \gantttitlelist{1,...,11}{1} \\
-  \ganttgroup{Research}{1}{11} \\
-  \ganttbar{Proposal}{1}{2} \\
-  \ganttmilestone{Draft Proposal}{2} \\
-  \ganttmilestone{Final Proposal}{3} \\
-  \ganttbar{Writing}{3}{10} \\
-  \ganttmilestone{Draft Paper}{9} \\
-  \ganttmilestone{Final Paper}{10} \\
-  \ganttbar{Presentation}{11}{11} \\
-  \ganttbar{subRQ1-2}{3}{3} \\
-  \ganttbar{subRQ3}{4}{8} \\
-  \ganttbar{subRQ4}{8}{9} \\
-  \ganttlink{elem8}{elem9}
-  \ganttlink{elem9}{elem10}
-  \ganttlink{elem1}{elem4}
-\end{ganttchart}
-
 
 \section{Conclusions}
 At this point in the research we have created an \hyperref[introduction]{introduction for the research}. We have also performed a literature review of available work in the field of precipitation nowcasting. We have written the methods that we will use to perform the research and listed expected results. And we have visualized some of the data from our dataset.
 
-% \begin{acks}
-% I would like to thank my supervisor from the university of twente Elena Mocanu, for her help in writing the paper. Furthermore I would like to thank I would like to thank Dina Lazorkeno for proofreading my thesis.
-% \end{acks}
+\begin{acks}
+I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore I would like to thank I would like to thank Dina Lazorkeno for proofreading my thesis.
+\end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{ref}
@@ -276,22 +267,25 @@ At this point in the research we have created an \hyperref[introduction]{introdu
 
 \begin{figure}
     \centering
-    \includegraphics[width=225]{report/images/radar_reflectivity.png}
+    \includegraphics[width=225pt]{./images/radar_reflectivity.png}
     \caption{Radar Reflectivity}
+    \Description{}
     \label{fig:reflect}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=225]{report/images/vis_006.png}
-    \caption{Satellite Image: Visible Channel 18UTC 0.6\mu m}
+    \includegraphics[width=225pt]{./images/vis_006.png}
+    \caption{Satellite Image: Visible Channel 18UTC $0.6\mu m$}
+    \Description{}
     \label{fig:vis}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=225]{report/images/radar_source.png}
-    \caption{Satellite Image: Infrared Channel 18UTC 12.0\mu m}
+    \includegraphics[width=225pt]{./images/radar_source.png}
+    \caption{Satellite Image: Infrared Channel 18UTC $12.0\mu m$}
+    \Description{}
     \label{fig:source}
 \end{figure}
 

@@ -37,7 +37,7 @@ def make_gif(array: np.ndarray, pred=True):
 
 
 def save_image_grid(images: np.ndarray, active_experiment_name: str, pred: bool = True):
-    ncols = 4
+    ncols = 1
     nrows = math.ceil(len(images) / ncols)
     fig, axs = plt.subplots(nrows, ncols, figsize=(10, 8))
     # fig.tight_layout()
@@ -67,13 +67,14 @@ def visualize(predict_dataloader: DataLoader, model: pl.LightningModule) -> np.n
     result = trainer.predict(model, predict_dataloader)
 
     radar_sequence = result[0][0, :, :, :].detach().numpy()
+    allPredictions = [x[0][0, :, :, :].detach().numpy() for x in result]
     # radar_output = result[0].view((-1, 166, 134)).detach().numpy()
     # print(radar_output.size())
 
     active_experiment_name = "dummy_name"
     save_image_grid(radar_sequence, active_experiment_name)
-    make_gif(radar_sequence)
-    make_gif([val[1] for val in iter(predict_dataloader)])
+    make_gif(allPredictions)
+    make_gif([val[1].detach().numpy() for val in iter(predict_dataloader)])
 
     # mlflow.log_artifact("test_image.png")
 

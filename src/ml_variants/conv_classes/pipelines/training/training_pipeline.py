@@ -11,7 +11,7 @@ docker_settings = DockerSettings(
 )
 
 
-@pipeline(settings={"docker": docker_settings})
+@pipeline(settings={"docker": docker_settings}, enable_cache=False)
 def one_lstm_pipeline():
     (
         train_dataloader,

@@ -58,6 +58,7 @@ class DatasetDistributorCombined:
         increase_satellite = math.floor(
             self.file_quantity_satellite * self.splits[self.index]
         )
+
         increase_radar = self.to_radar_resolution(increase_satellite)
 
         upper_limit_satellite = (

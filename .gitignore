@@ -4,3 +4,13 @@ __pycache__
 lightning_logs
 zenml.yaml
 ml_runs
+utils
+report/main.out
+report/main.log
+report/main.bbl
+report/main.fls
+report/main.fdb_latexmk
+report/main.synctex.gz
+report/main.blg
+report/main.aux
+report/comment.cut

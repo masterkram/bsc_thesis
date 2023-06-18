@@ -19,8 +19,19 @@ class ConvLSTMSettings:
 
 
 @ts.settings
+class DatasetSplit:
+    training: float
+    validation: float
+    testing: float
+
+
+@ts.settings
 class ModelSettings:
     name: str
+    batch_size: int
+    max_epochs: int
+    loss: str
+    splits: DatasetSplit
     input_size: Shape
     output_size: Shape
     encoder: ConvLSTMSettings

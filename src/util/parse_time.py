@@ -32,14 +32,15 @@ def find_matching_time(array: List, date: datetime) -> int:
     """
     for i in range(len(array)):
         current_time = parseTime(array[i])
-        # print(current_time, "vs", date)
 
         if current_time >= date:
             return i
 
 
+def find_matching_string(array: List, date: str) -> int:
+    return find_matching_time(array, parseTime(date))
+
+
 def get_next_sequence(sequence_length: int, selection: str, array: List) -> List:
-    start_time = parseTime(selection)
-    print(start_time)
-    start_index = find_matching_time(array, start_time)
+    start_index = find_matching_string(array, selection)
     return (start_index, start_index + sequence_length)

@@ -195,8 +195,8 @@ class Sat2Rad(pl.LightningModule):
         self.cnn_decoder = ConvDecoder()
         self.encoder_radar = ConvEncoderRadar()
 
-        # self.loss_fn = nn.MSELoss()
-        self.loss_fn = balanced_mae
+        self.loss_fn = nn.MSELoss()
+        # self.loss_fn = balanced_mae
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -333,10 +333,7 @@ class Sat2Rad(pl.LightningModule):
 )
 def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Module:
     model = Sat2Rad()
-    # trainer = pl.Trainer(
-    #     max_epochs=100, callbacks=[EarlyStopping(monitor="val_loss", mode="min")]
-    # )
-    trainer = pl.Trainer(max_epochs=1)
+    trainer = pl.Trainer(max_epochs=100)
 
     mlflow.pytorch.autolog()
 

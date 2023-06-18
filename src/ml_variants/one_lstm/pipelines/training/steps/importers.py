@@ -35,10 +35,14 @@ def importer_sat2rad() -> (
 ):
     data_module = Sat2RadDataModule(
         data_dir=PATH_TO_DATA,
-        batch_size=1,
+        batch_size=settings.batch_size,
         sequence_len_satellite=settings.input_size.sequence_length,
         sequence_len_radar=settings.output_size.sequence_length,
-        splits={"train": 0.7, "val": 0.2, "test": 0.1},
+        splits={
+            "train": 0.8,
+            "val": 0.1,
+            "test": 0.1,
+        },
         dataset_type=DatasetType.Sequence,
     )
     data_module.prepare_data()

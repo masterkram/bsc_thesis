@@ -2,7 +2,21 @@ import torch
 import numpy as np
 from Sat2RadDataset import Sat2RadDataset
 import math
-from util.parse_time import get_next_sequence
+from util.parse_time import get_next_sequence, find_matching_string, parseTime
+from datetime import datetime
+from torchvision.transforms.functional import resize, InterpolationMode
+from util.parse_time import get_next_sequence, find_matching_string
+
+
+def loadFile(file: str):
+    arr = np.load(file)
+    return addTimeDim(arr, file)
+
+
+def addTimeDim(array: np.ndarray, time: str):
+    now = parseTime(time).hour / 24
+    times = np.array([now]).repeat(256 * 256).reshape((1, 256, 256))
+    return np.concatenate((array, times), axis=0)
 
 
 class ClassDatasetSequence(Sat2RadDataset):
@@ -16,20 +30,29 @@ class ClassDatasetSequence(Sat2RadDataset):
         super().__init__(
             satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
         )
+        lastPrediction = self.radar_files[(self.rad_len - 1) - (self.radar_seq_len - 1)]
+        lastInput = find_matching_string(self.satellite_files, lastPrediction)
+        if lastInput is None:
+            lastPrediction = self.radar_files[
+                (self.rad_len - 1) - (self.radar_seq_len - 1) - 1
+            ]
+            lastInput = find_matching_string(self.satellite_files, lastPrediction)
+
+        self.length = len(
+            np.lib.stride_tricks.sliding_window_view(
+                self.satellite_files[0 : lastInput - 5], self.satellite_seq_len, axis=0
+            )
+        )
 
     def __len__(self) -> int:
         "Denotes the total number of samples"
-        seq_amount_sat = self.sat_len // self.satellite_seq_len
-        seq_amount_rad = (self.rad_len - self.satellite_seq_len * 3 - 4) // (
-            3 * self.satellite_seq_len
-        )
-        return min(seq_amount_sat, seq_amount_rad) - 1
+        return self.length
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
 
-        lower_bound_satellite = index * self.satellite_seq_len
-        upper_bound_satellite = (index + 1) * self.satellite_seq_len
+        lower_bound_satellite = index
+        upper_bound_satellite = index + self.satellite_seq_len
 
         # beginning of the day has 2 extra images before satellite image
         lower_bound_radar, upper_bound_radar = get_next_sequence(
@@ -39,7 +62,7 @@ class ClassDatasetSequence(Sat2RadDataset):
         )
 
         satellite_sequence = [
-            np.load(file)
+            loadFile(file)
             for file in self.satellite_files[
                 lower_bound_satellite:upper_bound_satellite
             ]
@@ -54,5 +77,6 @@ class ClassDatasetSequence(Sat2RadDataset):
 
         X = torch.from_numpy(satellite_sequence)
         y = torch.from_numpy(radar_sequence)
+        y = resize(y, [256, 256], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.long()

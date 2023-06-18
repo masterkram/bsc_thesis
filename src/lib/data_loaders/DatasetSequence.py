@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from Sat2RadDataset import Sat2RadDataset
 import math
-from util.parse_time import get_next_sequence
+from util.parse_time import get_next_sequence, find_matching_string
 
 
 class Sat2RadDatasetSequence(Sat2RadDataset):
@@ -19,11 +19,10 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
 
     def __len__(self) -> int:
         "Denotes the total number of samples"
-        seq_amount_sat = self.sat_len // self.satellite_seq_len
-        seq_amount_rad = (self.rad_len - self.satellite_seq_len * 3 - 4) // (
-            3 * self.satellite_seq_len
-        )
-        return min(seq_amount_sat, seq_amount_rad) - 1
+        lastPrediction = self.radar_files[(self.rad_len - 1) - (self.radar_seq_len - 1)]
+        lastInput = find_matching_string(self.satellite_files, lastPrediction)
+
+        return lastInput // self.satellite_seq_len - 1
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"

@@ -5,11 +5,11 @@ import os
 from typing import Type
 from DatasetType import DatasetType
 from DatasetSlidingWindow import Sat2RadDatasetSlidingWindow
-from DatasetDistributor import DatasetDistributor, DatasetDistributorCombined
+from DatasetDistributor import DatasetDistributorCombined
 from Sat2RadDataset import Sat2RadDataset
 from DatasetSequence import Sat2RadDatasetSequence
 from ClassDatasetSequence import ClassDatasetSequence
-from rich import table
+from ClassSlidingSequence import ClassDatasetSlidingWindow
 from typing import List, Dict, Tuple
 from rich.table import Table
 
@@ -42,11 +42,8 @@ class Sat2RadDataModule(pl.LightningDataModule):
         self.sequence_len_satellite = sequence_len_satellite
         self.sequence_len_radar = sequence_len_radar
         self.splits = splits
-        self.transform = transforms.Compose(
-            [
-                transforms.ToTensor(),
-            ]
-        )
+        self.transform = transforms.Compose([])
+        print(dataset_type)
         self.dataset_type = dataset_type
         self.regression = regression
 
@@ -73,15 +70,14 @@ class Sat2RadDataModule(pl.LightningDataModule):
         return sat, rad
 
     def get_dataset(self) -> Type[Sat2RadDataset]:
-        match self.dataset_type:
-            case DatasetType.SlidingWindow:
-                return Sat2RadDatasetSlidingWindow
-            case DatasetType.Sequence:
-                return Sat2RadDatasetSequence
-            case DatasetType.ClassSequence:
-                return ClassDatasetSequence
-            case _:
-                return Sat2RadDatasetSequence
+        if self.dataset_type == DatasetType.Sequence:
+            return Sat2RadDatasetSequence
+        elif self.dataset_type == DatasetType.ClassSlidingWindow:
+            return ClassDatasetSlidingWindow
+        elif self.dataset_type == DatasetType.SlidingWindow:
+            return Sat2RadDatasetSlidingWindow
+
+        return ClassDatasetSequence
 
     def setup(self, stage: str):
         self.sat, self.rad = self.ordered_files()
@@ -109,6 +105,8 @@ class Sat2RadDataModule(pl.LightningDataModule):
         write_log(self.table(train, val, test))
 
         DataSet = self.get_dataset()
+
+        write_log(f"using the dataset: {DataSet}")
 
         # training datasets
         self.train = DataSet(
@@ -186,7 +184,7 @@ class Sat2RadDataModule(pl.LightningDataModule):
             str(parseTime(self.rad[test[1][1]])),
             "Testing",
             str(len(self.sat[test[0][0] : test[0][1]])),
-            str(len(self.sat[test[1][0] : test[1][0]])),
+            str(len(self.rad[test[1][0] : test[1][1]])),
         )
         return table
 
@@ -201,13 +199,25 @@ class Sat2RadDataModule(pl.LightningDataModule):
         }
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=self.batch_size)
+        return DataLoader(
+            self.train,
+            batch_size=self.batch_size,
+            num_workers=12,
+            drop_last=True,
+            shuffle=True,
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.validate, batch_size=self.batch_size)
+        return DataLoader(
+            self.validate, batch_size=self.batch_size, num_workers=12, drop_last=True
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test, batch_size=self.batch_size)
+        return DataLoader(
+            self.test, batch_size=self.batch_size, num_workers=12, drop_last=True
+        )
 
     def predict_dataloader(self):
-        return DataLoader(self.predict, batch_size=self.batch_size)
+        return DataLoader(
+            self.predict, batch_size=self.batch_size, num_workers=12, drop_last=True
+        )

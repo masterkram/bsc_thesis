@@ -33,37 +33,40 @@ from layers.Unet3d import UNet3D
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
 
+SAVE_FOLDER = "../../../../../logs/"
+
 
 mlflow_settings = MLFlowExperimentTrackerSettings(
     experiment_name=mlflowConfig.experiment_name
 )
 
 
+def save_viz(pred, gt, i):
+    fig, axes = plt.subplots(1, 2)
+    axes[0].imshow(pred)
+    axes[1].imshow(gt)
+    fig.savefig(f"{SAVE_FOLDER}testunet-weights-{i}.png", dpi=300)
+
+
 class Sat2Rad(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.unet = UNet3D(11, 14, num_groups=1)
+        self.unet = UNet3D(12, 8, num_groups=1)
         self.classifer = nn.Conv3d(8, 1, 3, 1, 1)
         weights = torch.tensor(
             [
-                0.0001,
-                0.001,
-                0.002,
-                0.003,
-                0.004,
-                0.009,
-                0.01,
-                0.01,
-                0.04,
-                0.05,
-                0.12,
-                0.15,
-                0.2,
-                0.4009,
+                0.01081153,
+                0.13732371,
+                0.13895907,
+                0.1416087,
+                0.14272867,
+                0.14285409,
+                0.14285709,
+                0.14285714,
             ]
         )
         self.loss_fn = nn.CrossEntropyLoss(weight=weights)
-        self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=14)
+        self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=8)
         self.softmax = torch.nn.Softmax2d()
 
     def training_step(self, batch, batch_idx):
@@ -73,8 +76,8 @@ class Sat2Rad(pl.LightningModule):
 
         # y_hat = torch.argmax(y_hat, 1)
         # loss
-        print(y.shape, "y shape")
-        print(y_hat, "shape y hat")
+        y = torch.squeeze(y, 1)
+
         loss = self.loss_fn(y_hat, y)
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
 
@@ -82,11 +85,23 @@ class Sat2Rad(pl.LightningModule):
         self.accuracy(y_hat, y)
         self.log("train_acc", self.accuracy, on_epoch=True, prog_bar=True)
 
+        test = torch.unique(torch.argmax(y_hat, 1))
+        if torch.sum(test) != 0:
+            write_log(f"not 0 :smile: == {test}")
+        # save_viz(
+        #     torch.argmax(y_hat, 1).view(256, 256).cpu().detach().numpy(),
+        #     y.view(256, 256).cpu().detach().numpy(),
+        #     batch_idx,
+        # )
+
         return loss
 
     def validation_step(self, batch, batch_idx):
         _, y = batch
+
         y_hat = self(batch)
+        y = torch.squeeze(y, 1)
+
         print(y.shape, "y shape")
         print(y_hat.shape, "shape y hat")
         loss = self.loss_fn(y_hat, y)
@@ -95,6 +110,8 @@ class Sat2Rad(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         _, y = batch
         y_hat = self(batch)
+        y = torch.squeeze(y, 1)
+
         loss = self.loss_fn(y_hat, y)
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
 
@@ -105,17 +122,16 @@ class Sat2Rad(pl.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         y_hat = self(batch)
 
-        return torch.argmax(y_hat, 1)
+        # return torch.argmax(y_hat, 1)
+        return y_hat
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
-        print("jelllooo")
         x, y = batch
-        print(x.shape)
-        x = x.reshape(-1, 11, 8, 256, 256)
+        x = x.reshape(-1, 12, 8, 256, 256)
         x = self.unet(x)
-        x = x.reshape(-1, 8, 14, 256, 256)
+        x = x.reshape(-1, 8, 8, 256, 256)
         x = torch.squeeze(self.classifer(x), 1)
-        x = self.softmax(x)
+
         return x
 
 
