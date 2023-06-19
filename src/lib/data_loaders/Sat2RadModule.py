@@ -44,7 +44,7 @@ class Sat2RadDataModule(pl.LightningDataModule):
         self.splits = splits
         self.transform = transforms.Compose([])
         print(dataset_type)
-        self.dataset_type = dataset_type
+        self.dataset_type = DatasetType.ClassSlidingWindow
         self.regression = regression
 
     def load_with_full_path(self, path: str):

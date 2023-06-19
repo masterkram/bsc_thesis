@@ -1,10 +1,11 @@
 [model]
 name = "SAT2RAD_UNET"
+classes=8
 
 [model.input_size]
 height = 256
 width = 256
-channels = 11
+channels = 12
 sequence_length = 8
 
 [model.output_size]
@@ -13,22 +14,25 @@ width = 256
 channels = 1
 sequence_length = 1
 
-[model.encoder]
-kernel_size = [3,3]
+[model.unet]
+kernel_size = [3, 3]
 layers = 3
 filters = 64
 
-[model.decoder]
-kernel_size = [3,3]
-layers = 3
-filters = 64
-
-
-[training]
+[model.training]
 max_epochs = 100
-metrics = ['mae', 'mse', 'bmae', 'bmse']
-optimizer = 'adam'
-
+class_weights = [
+            0.01081153,
+            0.13732371,
+            0.13895907,
+            0.1416087,
+            0.14272867,
+            0.14285409,
+            0.14285709,
+            0.14285714,
+        ]
+metrics = ['acc', 'precision', 'recall', 'exact', "f1", "jaccard"]
+# optimizer = 'adam'
 
 [mlflow]
 experiment_name = "sat2rad_unet"

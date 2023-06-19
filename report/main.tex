@@ -43,7 +43,7 @@
 \renewcommand{\shortauthors}{Mark Bruderer}
 
 \begin{abstract}
-\section*{Abstract}
+\section*{Abstract}title
 The forecasting of rain is a complex problem with centuries of scientific work. The implications of weather for individuals and companies continue to be important. Machine Learning approaches have been shown to outperform state of the art physics based models of weather for short term predictions. We introduce a new type of model \textbf{Sat2Rad}. Our model takes as input multi-spectral satellite data and outputs radar reflectivity at a set of time-steps ranging from 15 to 180 minutes in the future. This model is novel for precipitation nowcasting because it uses several satellite spectral bands instead of using radar data as input.
 \end{abstract}
 
@@ -100,6 +100,17 @@ We propose to use multi-spectral satellite data to learn spatio-temporal mapping
 % Satellite data, on the other hand, can provide a global view of weather patterns and can be used to fill in gaps in radar coverage. Satellites can also provide information about cloud temperature, humidity, and other atmospheric conditions that can be used to infer the presence of precipitation. Additionally, satellite data can be useful for predicting the onset and duration of precipitation events, which can be valuable information for planning and emergency response.
 
 % However, using satellite data for precipitation nowcasting also presents some challenges, such as the need to develop accurate algorithms for translating satellite data into precipitation estimates. These algorithms must take into account factors such as the altitude of the clouds, the types of precipitation (e.g. rain, snow, or hail), and the intensity of the precipitation. Despite these challenges, the use of satellite data for precipitation nowcasting shows great promise and has the potential to improve our ability to predict precipitation in a variety of settings.
+\subsection{Problem Formulation}
+Problem can be formulated in two different ways depending on the used approach.
+
+\subsubsection{Pixel Level Regression}
+We wish to approximate a function f,
+
+Let $t \in \mathbb{N}$, represent a time index.
+Given a dataset $\{X_{sat}, y_{rad}\}$.  
+
+\subsubsection{Image Segmentation}
+
 
 \textbf{RQ1}: \textit{How can a deep learning model be trained to predict radar data with multi-spectral satellite data ?}
 \smallskip
@@ -146,6 +157,20 @@ In order to understand this research it is important to be acquainted with the m
 For the machine learning aspect of this research it is important to understand multi layer perceptrons (\textsc{MLPs}) \cite{schmidhuber2022annotated}. Furthermore it is important to understand convoutional neural networks and what benefits they afford in relation to \textsc{MLPs} \cite{oshea2015introduction}. It is also crucial to have an understanding of recurrent neural networks (RNNs) and their extension to include convolutions \cite{convlstm}.
 \medskip
 
+\subsection{Convolutional Neural Networks}
+Why do they exist
+motivation for conv nets comes from losing info when flattening but also when processing images it is possible for a pixel to
+receive info from all others becomes very expensive $t^2$ but when using conv nets its the kernel that is being learned. image transformation kernels manually developed. Combining the identically
+with ANN we can learn the weights of the kernels, for our given problem.
+
+How do they work
+they work
+
+\subsection{Recurrent Neural Networks}
+
+\subsection{Convolutional LSTM}
+
+\subsection{Axial Self-Attention}
 To have an understanding of the meteorological context of this project it is recommended to have an understanding of radar data \cite{rinehart1991radar}, satellite data specifically the kind used in this project \cite{schmid-no-date}.
 
 \section{Methodology}
@@ -156,6 +181,32 @@ From a business perspective the data.
 
 \subsection{Data Preprocessing}
 
+For the preprocessing of data we created a pipeline which distinguishes between satellite images and radar images to preprocess each following their own needs (See figure \ref{fig:preprocessing}).
+
+In the case of satellite data, we first download this data contained in zip files from a storage bucket. After all files are downloaded they are extracted into zip files, the pipeline takes care of deleting any files which are not needed anymore.
+Then we reproject the satellite images using the \texttt{satpy} package. By reprojecting we reduce the dimensions of each satellite image to \texttt{256 x 256} pixels.
+Via the reprojection we also obtain only the area of interest. specified by the coordinates for the lower corner (0, 50) and upper corner (1) of the region, this gives us the benelux region. This is the same region as given in the radar data.
+Additionally the projection is matched between the satellite image and radar image.
+After reprojecting we perform a \textit{statistics} step where we aggregate the dataset by finding the minimum and maximum values for each channel.
+The statistics are necessary for the next step which is normalization. During the normalization step we perform the \textit{Min-Max} Normalization (equation 1).
+
+\begin{equation}
+  x_{normalized} = \frac{x-min}{max-min}  
+\end{equation}
+
+After finalizing the normalization step we sample an image from the dataset which is visualized to check for errors in the pipeline.
+
+The radar pipeline begins with the downloading of radar files in the form of \texttt{h5} files. The collected files are each converted to decibels relative to Z (dBZ) from their previous unit.
+
+\begin{equation}
+  dBZ = x \cdot 0.5 - 32
+\end{equation}
+
+The preprocessing pipeline then splits into two, one step will normalize values between 0 and 1 using \textit{Min-Max} normalization and the other step will use levels of \textit{dBZ} to create discrete ranges of precipitation to use as classes during training.
+Finally the current images in the pipeline are resized using the nearest neighbor algorithm, to avoid changing the values with bilinear interpolation.
+Next identically to the satellite pipeline we sample and visualize a radar image for verification purposes.
+
+
 \begin{figure}
   \centering
   \includegraphics[width=225pt]{./images/preprocessing.png}
@@ -164,61 +215,29 @@ From a business perspective the data.
   \label{fig:preprocessing}
 \end{figure}
 
-satellite data
-
-radar data
-
-Issue during data cleaning was missing radar data.
-
 \subsection{Training}
-Using pytorch, pytorch ligthing, zenml, mlflow
+In order to build and train our models we worked with pytorch. We used pytorch lightning to provide a higher level interface to speed up the research process. To track our experiments we connected pytorch ligthning to mlflow, using MlFlow we can log metrics, atrifacts produced during training while keeping track of the used parameters during that training run.
+To create pipelines for preprocesing and training, we used the zenml library.
+
+We created 4 different datasets for our research. These datasets result from the combination of sliding and sequential datasets with class and regression datasets.
+We implemented these datasets as subclasses of pytorch vision datasets. We also created time based utility functions to align the start and ending times of satellite data and radar data, such that when data is split based on training, validation and testing percentages, data is still in the same temporal range. Keeping in mind that the radar data has a differnt resolution and is received at a different strides.
 
 \subsection{Performance Evaluation}
 
+Different metrics were used for the regression and the classification.
 
-
-\section{Results}
-
-\subsection{Data}
-
-\subsubsection{Dataset Details}
-
-We have obtained a multi-year structured archive of radar composites with a temporal resolution of 5 minutes. These radar composites are made from 5 Doppler radars that provide a good coverage of the Benelux area (See figure \ref{fig:source}). The readings of these radars can be combined to produce radar reflectivity data (see figure \ref{fig:reflect}).
-\medskip
-
-Additionally we have obtained satellite data from \textsc{EUMETSAT} at a \texttt{3x3km} spatial resolution and 15 minute temporal resolution. This data has been captured with the \textsc{SEVIRI} sensor \cite{schmid-no-date}, which produces multi-spectral satellite imagery (See figures \ref{fig:vis} and \ref{fig:infra}).
-
-\begin{figure}
-    \centering
-    \includegraphics[width=225pt]{./images/infrared.png}
-    \caption{Satellite Image: Infrared Channel 18UTC $12.0\mu m$}
-    \Description{Satellite Image of the earth}
-    \label{fig:infra}
-\end{figure}
-
-\subsubsection{Data Cleaning} \textit{UMAP} \cite{mcinnes2020umap} will be used to cluster the data from the satellite and radar to find outliers and potential data imbalances.
-
-\subsubsection{Preprocessing Details} Several options exist for preprocessing of the data. One could reproject the satellite images to match the area and geographic projection of the radar images, however this requires heavy computation and studies such as \cite{sønderby2020metnet} have shown the importance of the context (i.e data from outside the region of interest) for the predictions. We will preprocess our satellite images by cropping them to a smaller dimension to reduce the required parameters of the model, with padding outside the area of interest. We will standardize the pixel data from all images to floating point data between \texttt{0} and \texttt{1}.
-
-\subsection{Implementation Details}
-
-In this research we will work with \texttt{python} as it is the \textit{de facto} programming language for data science and machine learning. We will use the machine learning framework \texttt{pytorch} due to the high degree of availability of open-source model implementations that we can use as a base for our work, for instance this repository: \cite{openclimatefix-no-date}.
-\medskip
-
-To track our experiments we will use the open-source experiment tracker \texttt{mlflow} which allows us to record and track the performance of our experiments. With \texttt{mlflow} it is possible to record the configuration, data and code used for each experiment. This will free our time from manually tracking all experiments and their performance.
-\medskip
-
-We will use the Machine Learning Operations (\textit{MLops}) platform \texttt{zenml}. MLops is a concept that describes all work done to support the core process of training and deploying machine learning models, similar to \textit{DevOps} for software development. The use of \texttt{zenml} allows us to quickly experiment by structuring our code in modules named \textit{steps}. Steps can be arbitrarily combined in \texttt{zenml} to form \textit{pipelines}. To give a concrete example we will create a pipeline named \textit{training}, which will contain the steps: \textit{load\_data}, \textit{train} and \textit{evaluate}. \texttt{zenml} also allows us to muster compute resources, by connecting to \textit{Amazon web services}.
-
-% Our work will also use the Machine Learning Operations platform \texttt{zenml}, to structure our code in a modular fashion. This platform also provides the benefit of accelerating
-
-
-
-\subsection{Metrics}
-We plan to use the following metrics to evaluate our model:
+Classification evaluation metrics:
+\begin{enumerate}
+  \item Precision
+  \item Accuracy
+  \item Recall
+  \item Exact Match
+  \item F1 Score
+  \item Jaccard Index
+\end{enumerate}
 
 \begin{equation}
-MSE = \frac{\sum (\hat{y_i} -y_i)^2}{n}
+  MSE = \frac{\sum (\hat{y_i} -y_i)^2}{n}
 \end{equation}
 
 \begin{equation}
@@ -239,15 +258,17 @@ BMSE = \frac{\sum w(\hat{y_i}) \cdot (\hat{y_i} -y_i)^2}{n}
 BMAE = \frac{\sum w(\hat{y_i})  \cdot (\hat{y_i} -y_i)^2}{n}
 \end{equation}
 
-\subsection{Experiments}
 
-The input and output data will be the full data as discussed in the data section, and will not change based on the experiments, since we know from literature that all the data from satellite channels can be useful.
+\section{Results}
 
-\begin{enumerate}
-    \item Use ConvLSTM architecture.
-    \item Use MetNet architecture
-    \item Evaluate the best performing model by running it over a month of data, and analyse the performance by performing aggregations of the predicted data and the ground truth.
-\end{enumerate}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=225pt]{./images/infrared.png}
+    \caption{Satellite Image: Infrared Channel 18UTC $12.0\mu m$}
+    \Description{Satellite Image of the earth}
+    \label{fig:infra}
+\end{figure}
 
 
 \section{Conclusions}

@@ -147,6 +147,52 @@ def balanced_mae(output, target):
     return torch.mean(torch.abs((target - output) * weight_function(target)))
 
 
+class Weighted_mse_mae(nn.Module):
+    def __init__(
+        self,
+        mse_weight=1.0,
+        mae_weight=1.0,
+        NORMAL_LOSS_GLOBAL_SCALE=0.00005,
+        LAMBDA=None,
+    ):
+        super().__init__()
+        self.NORMAL_LOSS_GLOBAL_SCALE = NORMAL_LOSS_GLOBAL_SCALE
+        self.mse_weight = mse_weight
+        self.mae_weight = mae_weight
+        self._lambda = LAMBDA
+
+    def forward(self, input, target):
+        balancing_weights = (1, 1, 2, 5, 10, 30)
+        weights = torch.ones_like(input) * balancing_weights[0]
+        thresholds = [
+            ele
+            for ele in np.array(
+                [0.104712042, 0.209424084, 0.314136126, 0.418848168, 0.523560209]
+            )
+        ]
+        for i, threshold in enumerate(thresholds):
+            weights = (
+                weights
+                + (balancing_weights[i + 1] - balancing_weights[i])
+                * (target >= threshold).float()
+            )
+        # weights = weights * mask.float()
+        # input: S*B*1*H*W
+        # error: S*B
+        mse = torch.sum(weights * ((input - target) ** 2), (2, 3, 4))
+        mae = torch.sum(weights * (torch.abs((input - target))), (2, 3, 4))
+        if self._lambda is not None:
+            S, B = mse.size()
+            w = torch.arange(1.0, 1.0 + S * self._lambda, self._lambda)
+            if torch.cuda.is_available():
+                w = w.to(mse.get_device())
+            mse = (w * mse.permute(1, 0)).permute(1, 0)
+            mae = (w * mae.permute(1, 0)).permute(1, 0)
+        return self.NORMAL_LOSS_GLOBAL_SCALE * (
+            self.mse_weight * torch.mean(mse) + self.mae_weight * torch.mean(mae)
+        )
+
+
 class Sat2Rad(pl.LightningModule):
     def __init__(self):
         super().__init__()
@@ -195,7 +241,7 @@ class Sat2Rad(pl.LightningModule):
         self.cnn_decoder = ConvDecoder()
         self.encoder_radar = ConvEncoderRadar()
 
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = Weighted_mse_mae()
         # self.loss_fn = balanced_mae
 
     def training_step(self, batch, batch_idx):

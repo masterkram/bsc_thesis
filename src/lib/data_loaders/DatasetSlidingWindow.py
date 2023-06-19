@@ -3,6 +3,7 @@ from Sat2RadDataset import Sat2RadDataset
 import numpy as np
 import torch
 from util.parse_time import get_next_sequence, find_matching_string
+from torchvision.transforms.functional import resize, InterpolationMode
 
 
 class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
@@ -52,5 +53,6 @@ class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
 
         X = torch.from_numpy(satellite_sequence)
         y = torch.from_numpy(radar_sequence)
+        y = resize(y, [256, 256], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.float()

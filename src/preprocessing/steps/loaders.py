@@ -24,8 +24,7 @@ def load_data() -> Output(satellite_images=List, radar_images=List):
     Returns lists of files ordered by time.
     """
     radar_images = os.listdir(radarSettings.folder.original_path)
-    # satellite_images = os.listdir(satSettings.folder.original_path)
-    satellite_images = []
+    satellite_images = os.listdir(satSettings.folder.original_path)
 
     # write_log(f"loaded {len(satellite_images)} satellite images :rocket:")
     write_log(f"loaded {len(radar_images)} radar images :satellite:")

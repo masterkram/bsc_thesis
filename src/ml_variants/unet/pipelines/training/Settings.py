@@ -12,19 +12,27 @@ class Shape:
 
 
 @ts.settings
-class ConvLSTMSettings:
+class UnetSettings:
     kernel_size: List
     layers: int
     filters: int
 
 
 @ts.settings
+class TrainingSettings:
+    max_epochs: int
+    class_weights: List[float]
+    metrics: List[str]
+
+
+@ts.settings
 class ModelSettings:
     name: str
+    classes: int
     input_size: Shape
     output_size: Shape
-    encoder: ConvLSTMSettings
-    decoder: ConvLSTMSettings
+    unet: UnetSettings
+    training: TrainingSettings
 
 
 @ts.settings

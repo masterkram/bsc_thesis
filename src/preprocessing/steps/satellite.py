@@ -134,9 +134,8 @@ def satellite_pixel_normalization(
     """
     zenml step to normalize pixels.
     """
-    if False:
-        satFiles = BindFiles(filenames, rename)
-        satFiles.bind(get_scaler_function(stats), desc="normalize pixel values")
+    satFiles = BindFiles(filenames, rename)
+    satFiles.bind(get_scaler_function(stats), desc="normalize pixel values")
 
 
 @step

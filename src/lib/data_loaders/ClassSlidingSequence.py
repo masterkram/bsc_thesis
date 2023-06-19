@@ -5,6 +5,7 @@ import math
 from util.parse_time import get_next_sequence, find_matching_string, parseTime
 from datetime import datetime
 from torchvision.transforms.functional import resize, InterpolationMode
+from torchvision.transforms import AutoAugment
 
 
 def loadFile(file: str):
@@ -39,8 +40,8 @@ class ClassDatasetSlidingWindow(Sat2RadDataset):
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
 
-        lower_bound_satellite = index * self.satellite_seq_len
-        upper_bound_satellite = (index + 1) * self.satellite_seq_len
+        lower_bound_satellite = index
+        upper_bound_satellite = index + self.satellite_seq_len
 
         # beginning of the day has 2 extra images before satellite image
         lower_bound_radar, upper_bound_radar = get_next_sequence(

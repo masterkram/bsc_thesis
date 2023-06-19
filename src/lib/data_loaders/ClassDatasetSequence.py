@@ -5,6 +5,7 @@ import math
 from util.parse_time import get_next_sequence, find_matching_string, parseTime
 from datetime import datetime
 from torchvision.transforms.functional import resize, InterpolationMode
+from torchvision.transforms import AutoAugment
 from util.parse_time import get_next_sequence, find_matching_string
 
 
@@ -30,23 +31,7 @@ class ClassDatasetSequence(Sat2RadDataset):
         super().__init__(
             satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
         )
-        lastPrediction = self.radar_files[(self.rad_len - 1) - (self.radar_seq_len - 1)]
-        lastInput = find_matching_string(self.satellite_files, lastPrediction)
-        if lastInput is None:
-            lastPrediction = self.radar_files[
-                (self.rad_len - 1) - (self.radar_seq_len - 1) - 1
-            ]
-            lastInput = find_matching_string(self.satellite_files, lastPrediction)
-
-        self.length = len(
-            np.lib.stride_tricks.sliding_window_view(
-                self.satellite_files[0 : lastInput - 5], self.satellite_seq_len, axis=0
-            )
-        )
-
-    def __len__(self) -> int:
-        "Denotes the total number of samples"
-        return self.length
+        self.auto = AutoAugment()
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"

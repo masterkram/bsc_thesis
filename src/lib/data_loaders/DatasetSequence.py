@@ -3,6 +3,7 @@ import numpy as np
 from Sat2RadDataset import Sat2RadDataset
 import math
 from util.parse_time import get_next_sequence, find_matching_string
+from torchvision.transforms.functional import resize, InterpolationMode
 
 
 class Sat2RadDatasetSequence(Sat2RadDataset):
@@ -16,13 +17,6 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         super().__init__(
             satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
         )
-
-    def __len__(self) -> int:
-        "Denotes the total number of samples"
-        lastPrediction = self.radar_files[(self.rad_len - 1) - (self.radar_seq_len - 1)]
-        lastInput = find_matching_string(self.satellite_files, lastPrediction)
-
-        return lastInput // self.satellite_seq_len - 1
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
@@ -53,5 +47,6 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
 
         X = torch.from_numpy(satellite_sequence)
         y = torch.from_numpy(radar_sequence)
+        y = resize(y, [256, 256], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.float()

@@ -27,6 +27,7 @@ import numpy as np
 import typed_settings as ts
 from Settings import ModelSettings, MlFlowSettings
 from util.log_utils import write_log, log_mlflow
+from util.evaluate_classification import ClassifierMetrics
 import torchmetrics
 from layers.Unet3d import UNet3D
 
@@ -51,22 +52,18 @@ def save_viz(pred, gt, i):
 class Sat2Rad(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.unet = UNet3D(12, 8, num_groups=1)
-        self.classifer = nn.Conv3d(8, 1, 3, 1, 1)
-        weights = torch.tensor(
-            [
-                0.01081153,
-                0.13732371,
-                0.13895907,
-                0.1416087,
-                0.14272867,
-                0.14285409,
-                0.14285709,
-                0.14285714,
-            ]
+        self.unet = UNet3D(settings.input_size.channels, settings.classes, num_groups=1)
+        self.classifer = nn.Conv3d(
+            settings.input_size.sequence_length, settings.output_size.channels, 3, 1, 1
         )
+        weights = torch.tensor(settings.training.class_weights)
         self.loss_fn = nn.CrossEntropyLoss(weight=weights)
-        self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=8)
+
+        self.metrics = ClassifierMetrics(
+            settings.training.metrics, num_classes=settings.classes
+        )
+        print(self.device)
+
         self.softmax = torch.nn.Softmax2d()
 
     def training_step(self, batch, batch_idx):
@@ -74,25 +71,20 @@ class Sat2Rad(pl.LightningModule):
 
         y_hat = self(batch)
 
-        # y_hat = torch.argmax(y_hat, 1)
         # loss
         y = torch.squeeze(y, 1)
 
         loss = self.loss_fn(y_hat, y)
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
 
-        # accuracy
-        self.accuracy(y_hat, y)
-        self.log("train_acc", self.accuracy, on_epoch=True, prog_bar=True)
+        # log metrics:
+        # self.accuracy(y_hat, y)
+        # self.log("train_acc", self.accuracy, on_epoch=True, prog_bar=True)
+        self.metrics.evaluate_classification(self, y_hat, y, "train", self.device)
 
         test = torch.unique(torch.argmax(y_hat, 1))
         if torch.sum(test) != 0:
             write_log(f"not 0 :smile: == {test}")
-        # save_viz(
-        #     torch.argmax(y_hat, 1).view(256, 256).cpu().detach().numpy(),
-        #     y.view(256, 256).cpu().detach().numpy(),
-        #     batch_idx,
-        # )
 
         return loss
 
@@ -102,10 +94,10 @@ class Sat2Rad(pl.LightningModule):
         y_hat = self(batch)
         y = torch.squeeze(y, 1)
 
-        print(y.shape, "y shape")
-        print(y_hat.shape, "shape y hat")
         loss = self.loss_fn(y_hat, y)
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+
+        self.metrics.evaluate_classification(self, y_hat, y, "val", self.device)
 
     def test_step(self, batch, batch_idx):
         _, y = batch
@@ -115,6 +107,8 @@ class Sat2Rad(pl.LightningModule):
         loss = self.loss_fn(y_hat, y)
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
 
+        self.metrics.evaluate_classification(self, y_hat, y, "test", self.device)
+
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters())
         return optimizer
@@ -122,7 +116,6 @@ class Sat2Rad(pl.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         y_hat = self(batch)
 
-        # return torch.argmax(y_hat, 1)
         return y_hat
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
@@ -144,7 +137,7 @@ def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Modu
     write_log(f"training {settings.name}")
     model = Sat2Rad()
 
-    trainer = pl.Trainer(max_epochs=5)
+    trainer = pl.Trainer(max_epochs=40)
 
     mlflow.pytorch.autolog()
 

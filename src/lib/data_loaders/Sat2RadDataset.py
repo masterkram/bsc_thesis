@@ -18,9 +18,13 @@ def find_last_satellite_file(
         return lastInput
 
     # try next if not found.
-    lastRadarIndex -= 1
-    lastPrediction = radar_files[lastRadarIndex]
-    return find_matching_string(satellite_files, lastPrediction)
+    i = 1
+    while i < 10 and lastInput is None:
+        lastPrediction = radar_files[lastRadarIndex - i]
+        lastInput = find_matching_string(satellite_files, lastPrediction)
+        i += 1
+
+    return lastInput
 
 
 def length_sequence(lastInput: int, satellite_seq_len: int) -> int:
@@ -63,5 +67,5 @@ class Sat2RadDataset(datasets.VisionDataset):
             else length_stride(satellite_files, lastSatellite, self.satellite_seq_len)
         )
 
-        def __len__(self):
-            return self.length
+    def __len__(self):
+        return self.length

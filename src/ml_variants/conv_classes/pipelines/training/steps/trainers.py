@@ -38,11 +38,21 @@ mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
 SAVE_FOLDER = "../../../../../logs/"
 
 
-def save_viz(pred, gt, i):
-    fig, axes = plt.subplots(1, 2)
-    axes[0].imshow(pred)
-    axes[1].imshow(gt)
-    fig.savefig(f"{SAVE_FOLDER}testconvclass-{i}.png", dpi=300)
+def save_viz(image: np.ndarray, gt: np.ndarray, sat: np.ndarray, idx):
+    fig, axes = plt.subplots(2, 5)
+    for i, a in enumerate(axes[0]):
+        a.imshow(sat[i][0])
+
+    axes[-1, 0].set_title("ground truth")
+    axes[-1, 0].imshow(gt)
+    axes[-1, 1].axis("off")
+    axes[-1, 2].axis("off")
+    axes[-1, 3].axis("off")
+    axes[-1, -1].set_title("prediction")
+    axes[-1, -1].imshow(image)
+
+    save_path = f"{SAVE_FOLDER}experiment-{idx}.png"
+    fig.savefig(save_path)
 
 
 mlflow_settings = MLFlowExperimentTrackerSettings(
@@ -55,24 +65,26 @@ class Sat2Rad(pl.LightningModule):
         super().__init__()
 
         self.temporal_encoder = ConvLSTM(
-            input_size=(256, 256),
             input_dim=12,
-            hidden_dim=[64, 64],
-            kernel_size=(3, 3),
+            hidden_dim=120,
+            kernel_size=3,
             num_layers=2,
-            peephole=True,
-            batchnorm=False,
-            batch_first=True,
-            activation=F.tanh,
         )
-        # self.temporal_encoder = ConvLSTMBlock(12, 64)
+        # # self.temporal_encoder = ConvLSTMBlock(12, 64)
 
-        self.spatial_aggregator = nn.Sequential(
-            nn.Conv2d(64, 32, (3, 3), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(32, 16, (5, 5), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(16, 8, (3, 3), 1, "same"),
+        # self.spatial_aggregator = nn.Sequential(
+        #     nn.Conv2d(64, 32, (3, 3), 1, "same"),
+        #     nn.ReLU(),
+        #     nn.Conv2d(32, 16, (5, 5), 1, "same"),
+        #     nn.ReLU(),
+        #     nn.Conv2d(16, 8, (3, 3), 1, "same"),
+        # )
+        self.position_embedding = AxialPositionalEmbedding(dim=120, shape=(256, 256))
+        self.temporal_agg = nn.Sequential(
+            *[
+                AxialAttention(dim=120, dim_index=1, heads=4, num_dimensions=2)
+                for _ in range(1)
+            ]
         )
         # self.loss_fn = FocalLoss([0.25 for _ in range(8)], gamma=2)
         weigths = torch.tensor(
@@ -87,6 +99,7 @@ class Sat2Rad(pl.LightningModule):
                 0.14285714,
             ]
         )
+        self.head = nn.Conv2d(120, 8, kernel_size=(1, 1))
 
         self.loss_fn = nn.CrossEntropyLoss(weight=weigths, label_smoothing=0.1)
         self.iou = torchmetrics.JaccardIndex("multiclass", num_classes=8)
@@ -112,6 +125,7 @@ class Sat2Rad(pl.LightningModule):
         # save_viz(
         #     torch.argmax(y_hat, 1).view(256, 256).cpu().detach().numpy(),
         #     y.view(256, 256).cpu().detach().numpy(),
+        #     x.view(5, 12, 256, 256).cpu().detach().numpy(),
         #     batch_idx,
         # )
 
@@ -149,12 +163,17 @@ class Sat2Rad(pl.LightningModule):
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, _ = batch
-        hidden_state = self.temporal_encoder.get_init_states(
-            batch_size=1, device=self.device
-        )
-        temporal_encoded, _ = self.temporal_encoder(x, hidden_state)
 
-        y_hat = self.spatial_aggregator(temporal_encoded[:, -1, :, :, :])
+        _, state = self.temporal_encoder(x)
+
+        # print(state, "this is state")
+        print(len(state[0]), "this is state 0 is h ?")
+
+        embedding = self.position_embedding(state[-1][0])
+
+        xi = self.temporal_agg(embedding)
+
+        y_hat = self.head(xi)
 
         return y_hat
 
