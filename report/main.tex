@@ -43,7 +43,7 @@
 \renewcommand{\shortauthors}{Mark Bruderer}
 
 \begin{abstract}
-\section*{Abstract}title
+\section*{Abstract}
 The forecasting of rain is a complex problem with centuries of scientific work. The implications of weather for individuals and companies continue to be important. Machine Learning approaches have been shown to outperform state of the art physics based models of weather for short term predictions. We introduce a new type of model \textbf{Sat2Rad}. Our model takes as input multi-spectral satellite data and outputs radar reflectivity at a set of time-steps ranging from 15 to 180 minutes in the future. This model is novel for precipitation nowcasting because it uses several satellite spectral bands instead of using radar data as input.
 \end{abstract}
 
@@ -101,27 +101,29 @@ We propose to use multi-spectral satellite data to learn spatio-temporal mapping
 
 % However, using satellite data for precipitation nowcasting also presents some challenges, such as the need to develop accurate algorithms for translating satellite data into precipitation estimates. These algorithms must take into account factors such as the altitude of the clouds, the types of precipitation (e.g. rain, snow, or hail), and the intensity of the precipitation. Despite these challenges, the use of satellite data for precipitation nowcasting shows great promise and has the potential to improve our ability to predict precipitation in a variety of settings.
 \subsection{Problem Formulation}
-Problem can be formulated in two different ways depending on the used approach.
+We approach precipitation nowcasting as a
+self-supervised problem. A self supervised task arises when
+no explicit labels are given, but instead labels can be taken from the raw data itself
+as is commonly the case with time-series data.
+We can therfore apply known techniques in supervised learning to solve our research problem.
+\\
 
-\subsubsection{Pixel Level Regression}
-We wish to approximate a function f,
+Consider a dataset \{X, Y\} consisting of pairs of input-output sequences indexed by $i \in \mathbb{N}$,
+%where each input sequence represents a temporal sequence of $t$ satellite images with height $H$, width $W$ and $c$ channels.
+Let $$X = \{\forall i | x^{(i)} \in \mathbb{R}^{t \times H \times W \times c}\}$$
+where $x^{(i)}$ is a tensor of dimension $t \times H \times W \times c$ representing the sequence of satellite images at position i, having t timesteps, H height, W width and c channels.
+The set of output sequences is denoted as $$Y = \{\forall i | y^{(i)} \in \mathbb{N}^{W\times H}\}$$
+where $y^{(i)}$ represents the $i_{th}$ H $\times W$ dimensional tensor containing discrete integers mapping to rainfall intensity classes.
 
-Let $t \in \mathbb{N}$, represent a time index.
-Given a dataset $\{X_{sat}, y_{rad}\}$.  
+The problem is formulated as finding a probability mass function p(x). This function must minimize the Cross Entropy Loss expressed as follows:
 
-\subsubsection{Image Segmentation}
+$$E = \frac{1}{H+W}\sum_{i=1}^H\sum_{j=1}^W t_{ij} log(p_{ij})$$
+
+Let $\hat{Y} = \{\forall i | p(x^{(i)})\}$, representing the predicted outputs for each sequence of satellite images and identical in dimensions to $y^{(i)}$.
+find p(x) such that $E(\hat{Y}, Y)$ is minimized.
 
 
-\textbf{RQ1}: \textit{How can a deep learning model be trained to predict radar data with multi-spectral satellite data ?}
-\smallskip
 
-This research question will be answered by looking at the following sub research questions:
-\begin{enumerate}
-    \item \textit{what is necessary to build a well performing model ?}
-    \item \textit{what methods can be used to create this model ?}
-    \item \textit{what is the effectiveness of the trained model ?}
-    \item \textit{what are the conditions under which the model can and cannot be used ?}
-\end{enumerate}
 
 \section{Main Contribution}
 This proposal has the potential to contribute a deep learning model capable of predicting precipitation in the short term with only satellite images.
@@ -156,6 +158,26 @@ In order to understand this research it is important to be acquainted with the m
 
 For the machine learning aspect of this research it is important to understand multi layer perceptrons (\textsc{MLPs}) \cite{schmidhuber2022annotated}. Furthermore it is important to understand convoutional neural networks and what benefits they afford in relation to \textsc{MLPs} \cite{oshea2015introduction}. It is also crucial to have an understanding of recurrent neural networks (RNNs) and their extension to include convolutions \cite{convlstm}.
 \medskip
+\subsection{Convolutional Neural Networks}
+Convolutional Neural Networks (CNNs) or Fully Convolutional Networks (FCNs) are a class of deep learning models suited for computer vision tasks. Unlike fully connected neural networks, which treat input data as a one dimensional vector, CNNs are designed to process higher dimensional data such as images.
+This distinction enables CNNs to exploit more spatial relationships and patterns in visual data as opposed to a flattend vector where these patters are not recoverable.
+
+CNNs were first introduced by [] in 1987, but were shown to beat state of the art classification with the ImageNet paper.
+
+This ability to automatically extract meaningful features from images is a fundamental advantage of CNNs over fully connected networks, as it significantly reduces the number of parameters and alleviates the computational burden associated with processing high-dimensional inputs. Furthermore, CNNs leverage parameter sharing, enabling them to efficiently learn translation-invariant features across the entire image. These inherent advantages make CNNs particularly effective for computer vision tasks, such as image classification, object detection, and semantic segmentation.
+In CNNs, the core building blocks are convolutional layers, pooling layers, and fully connected layers. A typical CNN architecture consists of multiple convolutional layers, each followed by a non-linear activation function, such as ReLU (Rectified Linear Unit), which introduces non-linearity into the network. Convolutional layers perform the convolution operation by applying a set of learnable filters to the input image, producing feature maps that capture local patterns. The pooling layers, commonly implemented as max pooling or average pooling, downsample the feature maps, reducing their spatial dimensions while preserving the most salient information. This downsampling helps achieve translation invariance and improves computational efficiency. The final layers of a CNN usually consist of one or more fully connected layers, which aggregate the learned features and make predictions based on the extracted representations. The parameters of the CNN are optimized through backpropagation and gradient descent algorithms, enabling the network to learn discriminative features that are highly informative for the given task.
+The modular architecture and hierarchical nature of CNNs make them well-suited for extracting spatial features from images and effectively capturing the complex patterns present in computer vision tasks. Their ability to automatically learn relevant features from raw pixel data, combined with their parameter sharing and hierarchical structure, has revolutionized the field of computer vision and significantly advanced the state-of-the-art in various visual recognition tasks.
+
+\subsection{Unet}
+Semantic segmentation, the task of assigning a class label to each pixel in an image, plays a crucial role in computer vision applications such as image understanding and scene understanding. U-Net, a convolutional neural network (CNN) architecture, has emerged as a highly effective solution for semantic segmentation tasks, providing accurate and detailed pixel-level predictions. The U-Net architecture is specifically designed to address the challenge of limited training data and to capture both local and global context information.
+The U-Net architecture gets its name from its U-shaped design, which consists of an encoder path and a decoder path. The encoder path resembles a traditional CNN and serves to capture spatial information and learn feature representations at various scales. It typically comprises multiple convolutional and pooling layers, where each convolutional layer extracts increasingly abstract features by convolving with learnable filters and applying non-linear activation functions.
+The decoder path, on the other hand, aims to recover the spatial information lost during the pooling and downsampling operations of the encoder. It employs a series of upsampling and transposed convolutional layers to gradually increase the spatial resolution and reconstruct the detailed predictions. The skip connections between the corresponding encoder and decoder layers help preserve fine-grained details and enable the fusion of local and global context information, facilitating more accurate segmentation. These skip connections bridge the gap between low-level and high-level features, allowing the network to leverage both local and global context for precise pixel-wise predictions.
+One of the key advantages of U-Net is its ability to capture contextual information effectively. By using skip connections, the network can combine low-level and high-level features, enabling the model to refine predictions by incorporating local details and global context simultaneously. This property is especially beneficial for tasks like semantic segmentation, where precise boundary delineation and accurate classification of object categories are essential.
+Furthermore, U-Net has gained popularity due to its relatively small number of parameters compared to other fully convolutional networks, making it more computationally efficient while maintaining competitive performance. This aspect is particularly advantageous when dealing with limited training data or when deploying models on resource-constrained devices.
+In summary, U-Net has emerged as a powerful CNN architecture for semantic segmentation tasks. By leveraging its U-shaped design, skip connections, and an effective combination of local and global context information, U-Net achieves accurate and detailed pixel-wise predictions. Its ability to capture contextual information while being computationally efficient makes it an attractive choice for various computer vision applications requiring fine-grained segmentation.
+
+
+
 
 \subsection{Convolutional Neural Networks}
 Why do they exist
@@ -173,6 +195,16 @@ they work
 \subsection{Axial Self-Attention}
 To have an understanding of the meteorological context of this project it is recommended to have an understanding of radar data \cite{rinehart1991radar}, satellite data specifically the kind used in this project \cite{schmid-no-date}.
 
+\textbf{RQ1}: \textit{How can a deep learning model be trained to predict radar data with multi-spectral satellite data ?}
+\smallskip
+
+This research question will be answered by looking at the following sub research questions:
+\begin{enumerate}
+    \item \textit{what is necessary to build a well performing model ?}
+    \item \textit{what methods can be used to create this model ?}
+    \item \textit{what is the effectiveness of the trained model ?}
+    \item \textit{what are the conditions under which the model can and cannot be used ?}
+\end{enumerate}
 \section{Methodology}
 We choose to structure our project based on the CRISP-DM framework.
 
