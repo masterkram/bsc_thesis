@@ -34,7 +34,7 @@ optimizer = 'adam'
 
 
 [mlflow]
-experiment_name = "sat2rad_binned_convlstm"
+experiment_name = "sat2rad_binned_convlstm_attention"
 experiment_tracker = "Infoplaza MLFlow"
 
 
