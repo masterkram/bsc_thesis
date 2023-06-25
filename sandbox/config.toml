@@ -6,7 +6,7 @@ classes=8
 height = 256
 width = 256
 channels = 12
-sequence_length = 8
+sequence_length = 5
 
 [model.output_size]
 height = 256

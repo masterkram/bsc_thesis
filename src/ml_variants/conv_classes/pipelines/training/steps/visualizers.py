@@ -55,7 +55,7 @@ def save_viz(image: np.ndarray, active_experiment_name: str, pred: bool = True):
 def save_viz_improved(
     image: np.ndarray, gt: np.ndarray, sat: np.ndarray, sat_files, inx
 ):
-    prediction = np.argmax(image, axis=0)
+    prediction = image
     fig, axes = plt.subplots(2, 5)
     for i, a in enumerate(axes[0]):
         a.set_title(parseTime(sat_files[i]))
@@ -76,26 +76,14 @@ def save_viz_improved(
 
 @step
 def visualize(
-    predict_dataloader: DataLoader, model: pl.LightningModule, file_list: Dict
+    predict_dataloader: DataLoader,
+    val_dataloader: DataLoader,
+    model: pl.LightningModule,
+    file_list: Dict,
 ) -> np.ndarray:
     trainer = pl.Trainer()
     result = trainer.predict(model, predict_dataloader)
 
-    # sample_output = 0
-
-    # gt_files = file_list["test"]["rad"]
-    # print(result[0].size())
-    # example_radar_sequence = result[0][sample_output].view(256, 256).detach().numpy()
-
-    # ground_truth = [np.load(x) for x in gt_files[0:1]]
-    # example_radar_sequence_gt = ground_truth[sample_output]
-    # active_experiment_name = "convlsm-predicting-classes"
-    # save_viz(example_radar_sequence, active_experiment_name)
-    # save_viz(example_radar_sequence_gt, active_experiment_name, False)
-
-    # all_predictions = [x[0].view(256, 256).detach().numpy() for x in result]
-    # make_gif(all_predictions)
-    # make_gif(ground_truth)
     dataset = ClassDatasetSequence(
         satellite_files=file_list["test"]["sat"],
         radar_files=file_list["test"]["rad"],
@@ -106,15 +94,28 @@ def visualize(
     for i, r in enumerate(result):
         write_log(f"{len(r)}")
         for batch in r:
-            write_log(f"in a batch {len(r)}")
-            write_log(f"in a batch torch ? {r.shape}")
-
             prediction = batch.view(8, 256, 256).cpu().detach().numpy()
             data, y = next(secondDataloader)
-            # print(y.shape)
-            # print(data.shape)
             gt = y.view(256, 256).cpu().detach().numpy()
             sat = data.view(5, 12, 256, 256).cpu().detach().numpy()
             save_viz_improved(prediction, gt, sat, file_list["test"]["sat"], i)
+
+    result = trainer.predict(model, val_dataloader)
+
+    dataset = ClassDatasetSequence(
+        satellite_files=file_list["valid"]["sat"],
+        radar_files=file_list["valid"]["rad"],
+        radar_seq_len=1,
+    )
+    secondDataloader = iter(DataLoader(dataset, batch_size=1, drop_last=True))
+
+    for i, r in enumerate(result):
+        write_log(f"{len(r)}")
+        for batch in r:
+            prediction = batch.view(8, 256, 256).cpu().detach().numpy()
+            data, y = next(secondDataloader)
+            gt = y.view(256, 256).cpu().detach().numpy()
+            sat = data.view(5, 12, 256, 256).cpu().detach().numpy()
+            save_viz_improved(prediction, gt, sat, file_list["valid"]["sat"], i)
 
     return np.zeros((10, 10))

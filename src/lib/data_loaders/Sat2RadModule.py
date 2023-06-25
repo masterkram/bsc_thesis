@@ -3,7 +3,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 import os
 from typing import Type
-from DatasetType import DatasetType
+from lib.data_loaders.DatasetType import DatasetType
 from DatasetSlidingWindow import Sat2RadDatasetSlidingWindow
 from DatasetDistributor import DatasetDistributorCombined
 from Sat2RadDataset import Sat2RadDataset
@@ -44,7 +44,7 @@ class Sat2RadDataModule(pl.LightningDataModule):
         self.splits = splits
         self.transform = transforms.Compose([])
         print(dataset_type)
-        self.dataset_type = DatasetType.ClassSlidingWindow
+        self.dataset_type = dataset_type
         self.regression = regression
 
     def load_with_full_path(self, path: str):

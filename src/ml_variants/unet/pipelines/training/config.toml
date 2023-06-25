@@ -31,8 +31,14 @@ class_weights = [
             0.14285709,
             0.14285714,
         ]
-metrics = ['acc', 'precision', 'recall', 'exact', "f1", "jaccard"]
-# optimizer = 'adam'
+metrics = [
+    'acc',
+    'precision',
+    'recall',
+    'exact',
+    'f1', 
+    'jaccard'
+]
 
 [mlflow]
 experiment_name = "sat2rad_unet"

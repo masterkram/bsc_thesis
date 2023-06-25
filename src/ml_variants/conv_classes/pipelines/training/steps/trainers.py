@@ -32,6 +32,7 @@ import torchmetrics
 from lib.loss.glou import giou_loss
 from lib.loss.focal_loss import FocalLoss
 from layers.Lstm2 import ConvLSTMBlock
+from util.evaluate_classification import ClassifierMetrics
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
@@ -72,21 +73,16 @@ class Sat2Rad(pl.LightningModule):
         )
         # # self.temporal_encoder = ConvLSTMBlock(12, 64)
 
-        # self.spatial_aggregator = nn.Sequential(
-        #     nn.Conv2d(64, 32, (3, 3), 1, "same"),
-        #     nn.ReLU(),
-        #     nn.Conv2d(32, 16, (5, 5), 1, "same"),
-        #     nn.ReLU(),
-        #     nn.Conv2d(16, 8, (3, 3), 1, "same"),
-        # )
-        self.position_embedding = AxialPositionalEmbedding(dim=120, shape=(256, 256))
-        self.temporal_agg = nn.Sequential(
-            *[
-                AxialAttention(dim=120, dim_index=1, heads=4, num_dimensions=2)
-                for _ in range(1)
-            ]
+        self.spatial_aggregator = nn.Sequential(
+            nn.Conv2d(120, 64, (3, 3), 1, "same"),
+            nn.ReLU(),
+            nn.Conv2d(64, 32, (3, 3), 1, "same"),
+            nn.ReLU(),
+            nn.Conv2d(32, 16, (5, 5), 1, "same"),
+            nn.ReLU(),
+            nn.Conv2d(16, 8, (3, 3), 1, "same"),
+            nn.LogSoftmax(dim=1),
         )
-        # self.loss_fn = FocalLoss([0.25 for _ in range(8)], gamma=2)
         weigths = torch.tensor(
             [
                 0.01081153,
@@ -99,11 +95,9 @@ class Sat2Rad(pl.LightningModule):
                 0.14285714,
             ]
         )
-        self.head = nn.Conv2d(120, 8, kernel_size=(1, 1))
 
-        self.loss_fn = nn.CrossEntropyLoss(weight=weigths, label_smoothing=0.1)
-        self.iou = torchmetrics.JaccardIndex("multiclass", num_classes=8)
-        self.accuracy = torchmetrics.Accuracy("multiclass", num_classes=8)
+        self.loss_fn = nn.NLLLoss(weight=weigths)
+        self.metrics = ClassifierMetrics(settings.training.metrics)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -119,15 +113,7 @@ class Sat2Rad(pl.LightningModule):
 
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
 
-        self.accuracy(y_hat, y)  # compute metrics
-        self.log("train_acc_step", self.accuracy, prog_bar=True)  # log metric object
-
-        # save_viz(
-        #     torch.argmax(y_hat, 1).view(256, 256).cpu().detach().numpy(),
-        #     y.view(256, 256).cpu().detach().numpy(),
-        #     x.view(5, 12, 256, 256).cpu().detach().numpy(),
-        #     batch_idx,
-        # )
+        self.metrics.evaluate_classification(self, y_hat, y, "train", self.device)
 
         return loss
 
@@ -139,8 +125,7 @@ class Sat2Rad(pl.LightningModule):
         loss = self.loss_fn(y_hat, y)
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
 
-        self.accuracy(y_hat, y)  # compute metrics
-        self.log("val_acc_step", self.accuracy, prog_bar=True)  # log metric object
+        self.metrics.evaluate_classification(self, y_hat, y, "val", self.device)
 
     def test_step(self, batch, batch_idx):
         _, y = batch
@@ -149,33 +134,30 @@ class Sat2Rad(pl.LightningModule):
         y_hat = self(batch)
         loss = self.loss_fn(y_hat, y)
         self.log("test_loss", loss, on_epoch=True)
-
-        accuracy = self.accuracy(y_hat, y)  # compute metrics
-        self.log("test_accuracy", accuracy)  # log metric object
+        self.metrics.evaluate_classification(self, y_hat, y, "test", self.device)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters())
         return optimizer
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        # return torch.argmax(self(batch), dim=1)
-        return self(batch)
+        return torch.argmax(self(batch), dim=1)
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, _ = batch
 
         _, state = self.temporal_encoder(x)
 
-        # print(state, "this is state")
-        print(len(state[0]), "this is state 0 is h ?")
+        # # print(state, "this is state")
+        # print(len(state[0]), "this is state 0 is h ?")
 
-        embedding = self.position_embedding(state[-1][0])
+        # embedding = self.position_embedding(state[-1][0])
 
-        xi = self.temporal_agg(embedding)
+        # xi = self.temporal_agg(embedding)
 
-        y_hat = self.head(xi)
+        # y_hat = self.head(xi)
 
-        return y_hat
+        return self.spatial_aggregator(state[-1][0])
 
 
 @step(
@@ -187,7 +169,7 @@ def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Modu
     write_log(f"training {settings.name}")
     model = Sat2Rad()
 
-    trainer = pl.Trainer(max_epochs=150)
+    trainer = pl.Trainer(max_epochs=50)
 
     mlflow.pytorch.autolog()
 

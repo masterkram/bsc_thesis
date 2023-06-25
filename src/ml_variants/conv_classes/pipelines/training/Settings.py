@@ -19,12 +19,18 @@ class ConvLSTMSettings:
 
 
 @ts.settings
+class TrainingSettings:
+    metrics: List
+
+
+@ts.settings
 class ModelSettings:
     name: str
     input_size: Shape
     output_size: Shape
     encoder: ConvLSTMSettings
     decoder: ConvLSTMSettings
+    training: TrainingSettings
 
 
 @ts.settings
