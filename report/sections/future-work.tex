@@ -3,7 +3,8 @@ first of all at the radar image level, frequencies for pixels containing rain ar
 Secondly at the dataset level, the training, validation and test datasets contain different amounts of rain. Future work
 could focus on created a curated dataset, that studies the amounts of rain in each partition and checks for sufficient rain events
 in the training dataset.
-Another avenue for future work could be working with alternative loss functions such as multi-class dice loss or focal loss.
+Another avenue for future work could be working with alternative loss functions such as multi-class dice loss as proposed by Sudre \cite{DBLP:journals/corr/SudreLVOC17} for 
+highly imbalanced segmentations or focal loss as proposed by Lin \cite{DBLP:journals/corr/abs-1708-02002}.
 Ensembling instead of training an end-to-end model could also be researched. For example by training a model to segment current available satellite images
 to radar images and then train a different model with both the satellite images and segmented radar reflectivity images.
 The problem also presents difficulties because the resolution of the satellite images is worse than the required output (3 vs 1 kilometer resolution).

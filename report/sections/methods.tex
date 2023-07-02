@@ -70,7 +70,7 @@ existing libraries make the assumption of either \textit{grayscale} or \textit{r
   dBZ(x) = x \cdot 0.5 - 32
 \end{equation}
 
-The preprocessing pipeline then splits into two, one step will normalize values between 0 and 1 using \textit{Min-Max} normalization and the other step will use levels of \textit{dBZ} to create discrete ranges of precipitation to use as classes during training \ref{tab:classes}.
+The preprocessing pipeline then splits into two, one step will normalize values between 0 and 1 using \textit{Min-Max} normalization and the other step will use levels of \textit{dBZ} to create discrete ranges of precipitation to use as classes during training (See table of classes, \ref{tab:dbzz}).
 Finally the current images in the pipeline are resized using the nearest neighbor algorithm, to avoid changing the class values with bilinear interpolation.
 Next identically to the satellite pipeline we sample and visualize a radar image for verification purposes.
 
