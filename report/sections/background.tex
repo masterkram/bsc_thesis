@@ -1,17 +1,16 @@
-In this section, we will explore the machine learning techniques utilized
-in this study as well as relevant background information regarding the
+In this section, we will describe the machine learning techniques utilized as well as relevant background information regarding the
 provided datasets and meterological use thereof.
-\medskip
+\smallskip
 
 \subsection{Convolutional Neural Networks}
 
 Convolutional neural networks (CNNs) were initially introduced by Yann LeCun et al. in 1998 \cite{lecun-1998} and applied to the challenge of handwritten digit classification. However, the breakthrough for CNNs came later with the success achieved by Krizhevsky et al \cite{krizhevsky-2017}. in the ImageNet paper of 2012.
 This work significantly advanced the state of the art of image classification.
-\medskip
+\smallskip
 
 CNNs are a class of deep learning models strongly capable of solving computer vision tasks. Unlike fully connected neural networks, which treat input data as a one dimensional vector, CNNs are designed to process higher dimensional data such as images.
 This distinction enables CNNs to exploit more spatial relationships and patterns in visual data as opposed to a flattened vector where these patters are not recoverable.
-\medskip
+\smallskip
 
 Additionally Convolutional neural networks reduce the amount of parameters that are needed for each layer. This reduction is caused by parameter sharing.
 In a traditional multi-layer perceptron weights exist for each connection while in CNNs a set of kernels are applied to the input. The kernels used in CNNs are small and are repeatedly applied across the input.
@@ -44,15 +43,16 @@ the depth dimension in a 3D U-Net can be replaced by the time dimension which le
 \end{figure}
 
 \subsection{Convolutional LSTM}
-As mentioned in the related works, the LSTM model, introduced by Hochreiter et al. \cite{lstm}.
-The improvement of this recurrent neural network design over prior designs is that a long term memory path was introduced.
-The long term memory path can be operated on by the input sequences, the operations that are performed on the long term memory
-depend on \textit{gates}. There are two gates that affect the long term memory: the input gate which decides which new information will be added and the forget gate, which decides how much will be forgotten.
-LSTM works with vectors, this would mean that to process images in a LSTM these would need to be flattened to a vector, most spatial information would be lost. This is why Shi et al. introduced ConvLSTM \cite{convlstm}.
+%As mentioned in the related works, the LSTM model, introduced by Hochreiter et al. \cite{lstm}.
+%The improvement of this recurrent neural network design over prior designs is that a long term memory path was introduced.
+%The long term memory path can be operated on by the input sequences, the operations that are performed on the long term memory
+%depend on \textit{gates}.
+%There are two gates that affect the long term memory: the input gate which decides which new information will be added and the forget gate, which decides how much will be forgotten.
+A traditional LSTM operates with vectors \cite{lstm}, this would mean that to process images in a LSTM these would need to be flattened to a vector, most spatial information would be lost. This is why Shi et al. introduced ConvLSTM \cite{convlstm}.
 Which replaces the learnable vectors in the LSTM with kernels, and the operations become convolutions.
 The equations of the ConvLSTM cell are below (equation 1-4). Each ConvLSTM cell produces a short term memory $ \mathcal{H}_{t}$ and a long term memory $\mathcal{C}_{t}$,
 the output after passing all of our sequence to the model is the short term memory $\mathcal{H}_{t}$. 
-The formulas can be explained starting with the use of activation functions $\sigma$ and $tanh$, sigmoid and hyperbolic tangent.
+The formulas can be explained relying with the use of activation functions $\sigma$ and $tanh$, sigmoid and hyperbolic tangent.
 The sigmoid function maps any $x$ between 0 and 1, values between 0 and 1 are used here as the \textit{fraction of information that is added or removed}.
 On the other hand the hyperbolic tangent function maps an input $x$ between $-1$ and 1. Therefore when the sigmoid activation represents the fraction or percentage of information being added or removed from for example the
 long term memory while the $tanh$ function is being used to normalize the information itself between 0 and 1.
@@ -107,7 +107,7 @@ This unit expresses reflectivity relative to a 1 millimeter drop within a cubic 
 
 See table \ref{tab:data} for a table with dBZ values and their corresponding meterological interpretation.
 The range of a radar extends to a couple hundred kilometers from their origin which means that to observe a larger area a group of radars
-can be combined to form a composite radar image see figure \ref{fig:radsource}. 
+can be combined to form a composite radar image (see figure \ref{fig:radsource}). 
 
 
 \subsection{Satellite Data}

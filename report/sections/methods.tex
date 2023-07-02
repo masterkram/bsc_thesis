@@ -1,12 +1,8 @@
-
-In this section, we will provide explanations of the methods, techniques, and procedures employed in our experiments. We will begin by discussing the data preprocessing steps, followed by an explanation of the training process. Finally, we will describe how we evaluated the performance of our models.
+In this section, we will provide explanations of the methods and techniques employed in our experiments.
 
 \subsection{Engineering For Machine Learning}
-In order to streamline our experimental process and minimize effort,
-we focused on developing the training and preprocessing code in a way that allows for easy experimentation.
-We also utilized tools that enhance efficiency and reproducibility in the research process, reducing time-consuming tasks.
-\medskip
-
+In order to streamline our experimental process and minimize effort, we used specific tools and techniques to make
+testing models more efficient.
 We adopted the \texttt{zenml} \cite{zenml} framework to structure our training and preprocessing pipelines.
 This framework brings several advantages to our workflow.
 One notable benefit is the promotion of modularity in the design of our pipelines.
@@ -15,36 +11,31 @@ By defining a series of functions with clear inputs and outputs,
 we ensure that each step can be easily understood and modified as needed.
 Moreover, the \texttt{zenml} web application offers a convenient way to monitor the status of our pipelines.
 This feature provides transparency and improves comprehension by providing insights into the outputs generated at each step.
-\medskip
-
 For experiment tracking we used the \texttt{MLFlow} framework \cite{mlflow}.
 This makes it easy to track all metrics over all experiments.
 With \texttt{MLFlow} it is also possible to compare different parameters that were used during training to experimentally find the best combinations.
 In \texttt{MLFlow} we save each finished model as an artifact which can be directly served as a server endpoint to start providing end users access to our models.
-\medskip
-
 We used the pytorch lightning library. Using patterns such as the \texttt{DataModule} and {LightningModule} to accelerate the
 research process. This library abstracts the process of backpropagation and updating parameters.
 Furthermore pytorch ligthning \cite{lightning} handles
 switching from training devices automatically for example \texttt{cpu} and \texttt{cuda} devices
 which decouples the training code from specific hardware.
-
 We made use of the \texttt{typed-settings} library \cite{typed} to allow cleanly structuring and validating settings for models.
 This ensures that to train a new version of a model in most cases only adjustments to the configuration file needs to be done.
 \texttt{typed-settings} supports passing training settings through toml configuration files, environment variables and command line options.
 
 \subsection{Data Preprocessing}
 For the preprocessing of data we created a pipeline which distinguishes between satellite images and radar images to process each following their own needs (See figure \ref{fig:preprocessing}).
-\medskip
+\smallskip
 
 The pipeline begins by obtaining all necessary files, from a remote storage bucket.
 This is done by a Bucket Service class which uses the \texttt{boto3} \cite{boto}
 library to interface with the bucket and download files in the required date ranges.
-\medskip
+\smallskip
 
 In the case of satellite data, the obtained files are compressed in zip files. The pipeline handles the extraction of these files deleting any files which are not needed along the way to ease the storage requirements.
 Then we \textit{reproject} the satellite images using the \texttt{satpy} package. This downsampling is done by a combination of cropping and interpolation via the nearest-neighbor algorithm.
-\medskip
+\smallskip
 
 By reprojecting we reduce the dimensions of each satellite image to \texttt{256 x 256} pixels from it's original dimensions of \texttt{3712 x 3712}.
 We also obtain only the geographical area of interest, specified by the coordinates for the lower corner \texttt{(50°0'0"N 0°0'0"E)} and the upper corner \texttt{(55°0'0"N 10°0'0"E)} of the region, this gives us
@@ -67,7 +58,7 @@ The statistics are necessary for the next step which is normalization. During th
 \end{equation}
 
 After finalizing the normalization step we sample an image from the dataset which is visualized to check for errors in the pipeline.
-\medskip
+\smallskip
 
 The radar pipeline begins with the downloaded \texttt{h5} files
 each is converted to decibels relative to Z (dBZ) (equation 8) from a \textit{grayscale} unit ranging from 0 to 255.
@@ -101,10 +92,11 @@ Next identically to the satellite pipeline we sample and visualize a radar image
 \end{figure}
 
 \subsection{Proposed Model Architectures}
+Three model architectures are tested: 3D U-Net, ConvLSTM and ConvLSTM with Attention Mechanism, all of these are suitable for classification and regression with a few alterations of the last layers.
 
 The 3D U-Net based model is given a input patch of dimension $8\times11\times256\times256$. The U-Net model produces a segmented image for each slice of the depth dimension.
 Therefore we added an additional 3D convolution after the normal U-Net architecture which reduces the output of the network from the shape $8\times8\times256\times256$ to the desired $1\times8\times256\times256$ or in the case of regression to $1\times256\times256$
-\medskip
+\smallskip
 
 
 For ConvLSTM models, we start with 3 layers of Convolutional LSTMs
@@ -112,6 +104,11 @@ with 64 filters that use a kernel size of 3.
 Then the short term memory of the last layer is passed to three 2D Convolutional Layers.
 The first Convolutional layer reduces the amount of channels to 32, the second to 16 and the last one to either 8 or 1 for classification and regression respectively.
 In the intermediate layers a ReLU \cite{relu} activation function is performed.
+\smallskip
+
+The architecture of ConvLSTM with Attention Mechanism consists of 3 layers of Convolutional LSTMs,
+with 64 filters with kernel size of 3. Then the short term memory of the last layer is passed to a Axial Positional Embedding Layer
+and a single Axial Attention layer with 4 attention heads.  
 
 \subsection{Experimental Setup}
 We trained each model for 50 epochs. The batch size was set to 1 because of memory constraints. We used the \textsc{Adam} algorithm for optimization from Kingma et al \cite{kingma-2014}.
@@ -220,8 +217,7 @@ The Jaccard index is particularly useful when evaluating models on imbalanced da
 \begin{equation}
   Jaccard Index = \frac{|TP|}{|TP| + |FP| + |FN|}
 \end{equation}
-\medskip
+\smallskip
 
 These metrics can be extended from the binary classification case that has two classes to a general definition for n classes by redefining $TP$, $FP$, $FN$ and $TN$.
-
 Another important remark is that for images, since each pixel is classified, the metrics are first calculated at the image level, then averaged over the number of samples.

@@ -90,11 +90,11 @@ We found that ConvLSTM outperforms the other approaches for both classification 
 \section{Results}
 \input{sections/results.tex}
 
-\section{Future Work}
-\input{sections/future-work.tex}
-
 \section{Discussion}
 \input{sections/discussion.tex}
+
+\section{Future Work}
+\input{sections/future-work.tex}
 
 \begin{figure}
     \centering
@@ -109,7 +109,10 @@ We found that ConvLSTM outperforms the other approaches for both classification 
 \input{sections/conclusion.tex}
 
 \begin{acks}
-I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore I would like to thank I would like to thank Dina Lazorkeno for proofreading my thesis.
+I would like to thank my supervisor from Elena Mocanu, for providing me with resources and feedback through our weekly meetings.
+I would like to also thank my company supervisor Christian Versloot for supporting me with the ML infrastructure,
+data gathering and providing suggestions regarding different machine learning approaches.
+Furthermore I would like to thank I would like to thank Dina Lazorkeno for her support and advice.
 \end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
@@ -117,9 +120,7 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
 
 \newpage
 \appendix
-\large{Appenices}
-
-\section{Images}
+\section{Appendix}
 
 \begin{figure*}[hbp]
   \centering
@@ -156,7 +157,7 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
 \begin{figure}[hbp]
   \centering
   \includegraphics[width=250pt]{./images/single_satellite.png}
-  \caption{Preprocessed Satellite Image}
+  \caption{Preprocessed Satellite Image. Each image corresponds to a different spectral band: \ref{tab:channels}}
   \Description{}
   \label{fig:satchannels}
 \end{figure}
@@ -164,7 +165,7 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
 \begin{figure}[hbp]
   \centering
   \includegraphics[width=200pt]{./images/radar_image.png}
-  \caption{Preprocessed Satellite Image}
+  \caption{Preprocessed Radar Image without continuous values.}
   \Description{}
   \label{fig:radar-pre}
 \end{figure}
@@ -172,14 +173,14 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
 \begin{figure}[hbp]
   \centering
   \includegraphics[width=200pt]{./images/radar_binned.png}
-  \caption{Preprocessed Satellite Image}
+  \caption{Preprocessed Radar Image With Classes.}
   \Description{}
   \label{fig:radar-bin}
 \end{figure}
 
 \begin{figure*}[hbp]
   \centering
-  \includegraphics[width=500pt]{./images/experiment-0.png}
+  \includegraphics[width=370pt]{./images/experiment-0.png}
   \caption{Testset prediction with ConvLSTM model for 2023-03-24 12:02:00 UTC.}
   \Description{}
   \label{fig:convclass}
@@ -187,47 +188,31 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
 
 \begin{figure*}[hbp]
   \centering
-  \includegraphics[width=500pt]{./images/experiment-0-unet.png}
+  \includegraphics[width=370pt]{./images/experiment-0-unet.png}
   \caption{Testset prediction with U-Net model for 2023-03-24 12:02:00 UTC.}
   \Description{}
-  \label{fig:unet}
-\end{figure*}
-\begin{figure*}[hbp]
-  \centering
-  \includegraphics[width=500pt]{./images/experiment-0.png}
-  \caption{Testset prediction with ConvLSTM model for 2023-03-24 12:02:00 UTC.}
-  \Description{}
-  \label{fig:convclass}
+  \label{fig:unet-pred}
 \end{figure*}
 
 \begin{figure*}[hbp]
   \centering
-  \includegraphics[width=500pt]{./images/experiment-0-unet.png}
-  \caption{Testset prediction with U-Net model for 2023-03-24 12:02:00 UTC.}
-  \Description{}
-  \label{fig:unet}
-\end{figure*}
-
-\begin{figure*}[hbp]
-  \centering
-  \includegraphics[width=400pt]{./images/experiment-19.png}
-  \caption{Testset Prediction ConvLSTM}
+  \includegraphics[width=370pt]{./images/experiment-19.png}
+  \caption{Testset Prediction with ConvLSTM model. Rainfall covers areas where
+  the sky is clear, seemingly at random.}
   \Description{}
   \label{fig:experiment-19}
 \end{figure*}
 
 \begin{figure*}[hbp]
   \centering
-  \includegraphics[width=400pt]{./images/experiment-160.png}
-  \caption{Testset Prediction 3D U-Net}
+  \includegraphics[width=370pt]{./images/experiment-160.png}
+  \caption{Testset Prediction with 3D U-Net model. Prediction covers the same area as target but misses details. And predicted intensity is lower.}
   \Description{}
   \label{fig:experiment-160}
 \end{figure*}
 
-\newpage
-\section{Tables}
 
-\begin{table}[]
+\begin{table}[hbp]
   \caption{Available Classes for Classification Models. Based on intervals of 10 dBZ in a interval between 0 and 60}
   \begin{tabular}{@{}ll@{}}
   \toprule
@@ -241,6 +226,7 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
   6     & $(50, 60]$  \\
   7     & $(60, +\infty)$  \\ \bottomrule
   \end{tabular}
+  \label{tab:dbzz}
 \end{table}
 
 \begin{table}[hbp]
@@ -263,7 +249,7 @@ I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore
   \label{tab:channels}
 \end{table}
 
-\begin{table}[h]
+\begin{table}[]
 \caption{Reflectivity in dBZ versus Rainrate}
 \begin{tabular}{@{}llll@{}}
 \toprule
@@ -283,5 +269,18 @@ LZ(dBZ) & R(mm/h) & R(in/h)        & Intensity             \\ \midrule
 65      & 421     & 16.6           & Extreme/large hail    \\ \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{table*}[]
+  \caption{Available Preprocessed Files, Split into train, validation and test data-sets. Start Data and End Date are the time of the first and last file in each array.}
+  \begin{tabular}{@{}lllll@{}}
+  \toprule
+  Start Date          & End Date            & Partition  & Satellite Files & Radar Files \\ \midrule
+  03-01 23:42 & 03-29 20:27 & Training   & 2664            & 8275        \\
+  03-29 20:27 & 04-02 07:57 & Validation & 333             & 1034        \\
+  04-02 07:57 & 04-05 22:42 & Testing    & 333             & 1034        \\
+  \textbf{03-01 23:42} & \textbf{04-05 22:42} & \textbf{Total}      & \textbf{3331}            & \textbf{10348}       \\ \bottomrule
+  \end{tabular}
+  \label{tab:data}
+\end{table*}
 
 \end{document}

@@ -2,8 +2,8 @@ Precipitation forecasting is essential to reduce the risk of life threatening si
 By having timely and accurate predictions of rainfall which in turn indicate the potential for destructive storms we can prevent injuries, assist companies in predicting energy production and use resources efficiently.
 \medskip
 
-A particularly strong threat is posed by rain storms and thunderstorms. Storms are one of the most destructive weather events in nature, capable of destroying human structures and even lead to loss of life \cite{noaa-national-severe-storms-laboratory-no-date}. Predicting storms is crucial and presents it's own set of challenges.
-\medskip
+%A particularly strong threat is posed by rain storms and thunderstorms. Storms are one of the most destructive weather events in nature, capable of destroying human structures and even lead to loss of life \cite{noaa-national-severe-storms-laboratory-no-date}. Predicting storms is crucial and presents it's own set of challenges.
+%\medskip
 
 At present meteorologists are able to successfully predict many instances of precipitation. Techniques that are used in practice range from manual analysis of current weather data (e.g radar or satellite images) to complex physics based simulations of our atmosphere with Numerical Weather Prediction (\textsc{NWP}) models.
 Various short term forecasting methods are based on \textit{optical flow}. Optical flow functions in two steps, first cumulonimbus (storm) clouds are identified, and then their movement is tracked to predict the location of precipitation. Thus in this case, the forming and dissipation of clouds known as a \textit{cell-lifecycle} \cite{noaas-national-weather-service-no-date} is not taken into account \cite{prudden2020review}.
@@ -19,10 +19,12 @@ Thus far most machine learning approaches for precipitation nowcasting have focu
 
 
 We propose to use multi-spectral satellite data to learn spatio-temporal mappings between sequences of satellite data and precipitation data in the near future. A well performing model could predict storm clouds when these clouds are still forming. An additional advantage is that contrary to radar data, satellite data is readily available over oceans and remote communities (See figure \ref{fig:radar-availability}) which allows for the prediction of precipitation over these regions.
-\smallskip
+\medskip
 
 \subsection{Problem Formulation}
-We consider precipitation nowcasting as a self-supervised problem. In self-supervised tasks, explicit labels are not provided, but rather we can derive labels from the raw data itself, which is often the case with time-series data. Consequently, we can utilize established techniques in supervised learning to address our research problem. The prediction of labels can be accomplished through two approaches: predicting discrete classes that correspond to different rain intensity intervals, or conducting pixel-level regression to learn the precise values of precipitation.
+We consider precipitation nowcasting as a self-supervised problem.
+%In self-supervised tasks, explicit labels are not provided, but rather we can derive labels from the raw data itself, which is often the case with time-series data. Consequently, we can utilize established techniques in supervised learning to address our research problem.
+The prediction of labels can be accomplished through two approaches: predicting discrete classes that correspond to different rain intensity intervals, or conducting pixel-level regression to learn the precise values of precipitation.
 
 \subsubsection{Regression Formulation} Consider a dataset \{X, Y\} consisting of pairs of input-output sequences indexed by $i \in \mathbb{N}$,
 %where each input sequence represents a temporal sequence of $t$ satellite images with height $H$, width $W$ and $c$ channels.
@@ -51,7 +53,7 @@ find p(x) such that $E(\hat{Y}, Y)$ is minimized.
 
 \subsection{Research Question}
 \textbf{RQ}: \textit{How can a deep learning model be trained to predict radar data with multi-spectral satellite data ?}
-\smallskip
+\medskip
 
 This research question will be answered by looking at the following sub research questions:
 \begin{enumerate}

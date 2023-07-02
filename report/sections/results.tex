@@ -5,7 +5,7 @@
 % with a Convolutional head. If we compare both U-Net and ConvLSTM models visually \ref{fig:convclass} \ref{unet} we can see that ConvLSTM is more confident in predicting high rain intensity
 % while the U-Net model predicts only low levels of rain, however it is more accurate at predicting the area of rain in the ground truth. Another remark is that all metrics seem to be the same across the models.
 % This can occur if the false positive rate is equal to the false negative rate.
-In this section we will present the results obtained from the study, first we will show the results of data preprocessing, then we will present the trained classification models results and finally the regression model results.
+In this section we will present the results of the experiments.
 
 \subsection{Data}
 After preprocessing we obtain \texttt{3331} satellite files and \texttt{10348} radar files see table (\ref{tab:data}).
@@ -13,32 +13,19 @@ The storage size of which is equal to \texttt{387.6} Gigabytes.
 We split the data with a \texttt{0.8} split for testing \texttt{0.1} for validation and testing.
 A sample of a preprocessed satellite file can be seen in Figure \ref{fig:satchannels}.
 From this satellite image we can see that the area has been cropped from the original.
-This image is also in a different map projection from the original, the preprocessing has produced a mercator map projection,
-from the original geostationary projection.
+%This image is also in a different map projection from the original, the preprocessing has produced a mercator map projection,
+%from the original geostationary projection.
 The area visible corresponds to the European Netherlands in the center, on the left we have south east England and on the right we have Germany and Denmark.
 On the south of the image we can observe clouds in all visual and infrared channels.
 On the water vapour channels we can also see that there is higher degree of water vapour in the south and middle of the image, compared to the other parts of the image.
-A preprocessed radar image can be seen in Figure \ref{fig:radar-pre}. A binned radar image can be seen in Figure \ref{fig:radar-bin} where each pixel is represented by one of the eight classes.
-
-\begin{table}[]
-\caption{Available Preprocessed Files, Split into train, validation and test data-sets. Start Data and End Date are the time of the first and last file in each array.}
-\begin{tabular}{@{}lllll@{}}
-\toprule
-Start Date          & End Date            & Partition  & Satellite Files & Radar Files \\ \midrule
-03-01 23:42 & 03-29 20:27 & Training   & 2664            & 8275        \\
-03-29 20:27 & 04-02 07:57 & Validation & 333             & 1034        \\
-04-02 07:57 & 04-05 22:42 & Testing    & 333             & 1034        \\
-\textbf{03-01 23:42} & \textbf{04-05 22:42} & \textbf{Total}      & \textbf{3331}            & \textbf{10348}       \\ \bottomrule
-\end{tabular}
-\label{tab:data}
-\end{table}
+A preprocessed radar image can be seen in Figure \ref{fig:radar-pre}. A binned radar image can be seen in Figure \ref{fig:radar-bin} where each pixel is represented by one of the eight classes (table \ref{tab:dbzz}).
 
 \subsection{Trained Classification Models}
 Trained classification models are listed in table \ref{tab:class}.
 We focus on the jaccard index to evaluate the best performing model due to class imbalance.
 Based on the jaccard index of \textbf{0.1249} the best performing model is the ConvLSTM without using the attention mechanism. This same model also managed to
 predict 53\% of the radar images in the test set exactly. The model most likely obtains a perfect score when there is no rain in the image and the expected output therefore is a empty image.
-In second place we have the ConvLSTM with attention, and in the last place we have the 3D U-Net. We have also visually analyzed the predictions made by the models which can be seen in figure \ref{fig:convclass} and figure \ref{fig:unet}.
+In second place we have the ConvLSTM with attention, and in the last place we have the 3D U-Net. We have also visually analyzed the predictions made by the models which can be seen in figure \ref{fig:convclass} and figure \ref{fig:unet-pred}.
 The U-Net based model predicts low amounts of rain but generally predicts the position and movement of clouds better. Meanwhile ConvLSTM based models are more eager
 to predict higher rainfall classes and therefore look similar to the target, however when investigating the outputs for the entire test set it seems that the ConvLSTM based model does not learn the spatio-temporal patterns
 as well as the U-Net. This can be observed in Figure \ref{fig:experiment-19}, where the LSTM based model does not segment areas covered by clouds, but seemingly randomly predicting rainfall over the whole Netherlands.

@@ -4,12 +4,15 @@
     "editor.formatOnSave": true
   },
   "cSpell.words": [
+    "Conv",
     "Convolutional",
     "downsampling",
     "grayscale",
     "interpretability",
+    "LSTM",
     "reproject",
     "reprojecting",
-    "Reprojection"
+    "Reprojection",
+    "supercell"
   ]
 }
