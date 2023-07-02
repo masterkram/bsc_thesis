@@ -43,16 +43,19 @@ class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
                 lower_bound_satellite:upper_bound_satellite
             ]
         ]
-        radar_sequence = [
-            np.load(file)
-            for file in self.radar_files[lower_bound_radar:upper_bound_radar]
-        ]
+        # radar_sequence = [
+        # np.load(file)
+        # for file in self.radar_files[lower_bound_radar:upper_bound_radar]
+        # ]
+
+        radar = np.load(self.radar_files[upper_bound_radar])
 
         satellite_sequence = np.array(satellite_sequence)
-        radar_sequence = np.array(radar_sequence)
+        # radar_sequence = np.array(radar_sequence)
 
         X = torch.from_numpy(satellite_sequence)
-        y = torch.from_numpy(radar_sequence)
+        # y = torch.from_numpy(radar_sequence)
+        y = torch.from_numpy(radar).view(1, 1660, 1340)
         y = resize(y, [256, 256], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.float()

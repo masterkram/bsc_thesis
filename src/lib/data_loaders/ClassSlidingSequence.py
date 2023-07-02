@@ -6,6 +6,7 @@ from util.parse_time import get_next_sequence, find_matching_string, parseTime
 from datetime import datetime
 from torchvision.transforms.functional import resize, InterpolationMode
 from torchvision.transforms import AutoAugment
+from util.log_utils import write_log
 
 
 def loadFile(file: str):
@@ -56,16 +57,21 @@ class ClassDatasetSlidingWindow(Sat2RadDataset):
                 lower_bound_satellite:upper_bound_satellite
             ]
         ]
-        radar_sequence = [
-            np.load(file)
-            for file in self.radar_files[lower_bound_radar:upper_bound_radar]
-        ]
+        # radar_sequence = [
+        #    np.load(file)
+        #   for file in self.radar_files[lower_bound_radar:upper_bound_radar]
+        # ]
 
         satellite_sequence = np.array(satellite_sequence)
-        radar_sequence = np.array(radar_sequence)
+        radar_sequence = np.load(self.radar_files[upper_bound_radar])
+
+        write_log(
+            f"sat({parseTime(self.satellite_files[lower_bound_satellite])} - {parseTime(self.satellite_files[upper_bound_satellite])}): rad({parseTime(self.radar_files[lower_bound_radar])} - {parseTime(self.radar_files[upper_bound_radar])})"
+        )
 
         X = torch.from_numpy(satellite_sequence)
-        y = torch.from_numpy(radar_sequence)
-        y = resize(y, [256, 256], interpolation=InterpolationMode.NEAREST)
+        y = torch.from_numpy(radar_sequence).view(1, 1660, 1340)
+        print(y.shape)
+        y = resize(y, [64, 64], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.long()

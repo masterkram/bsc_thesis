@@ -29,6 +29,7 @@ from Settings import ModelSettings, MlFlowSettings
 from util.log_utils import write_log, log_mlflow
 import numpy as np
 from datetime import datetime
+from util.evaluate_regression import RegressionMetrics
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
@@ -83,15 +84,10 @@ class Sat2Rad(pl.LightningModule):
         super().__init__()
 
         self.temporal_encoder = ConvLSTM(
-            input_size=(settings.input_size.height, settings.input_size.width),
             input_dim=11,
-            hidden_dim=[64],
-            kernel_size=(5, 5),
-            num_layers=1,
-            peephole=True,
-            batchnorm=False,
-            batch_first=True,
-            activation=F.tanh,
+            hidden_dim=64,
+            kernel_size=3,
+            num_layers=3,
         )
 
         self.head = nn.Sequential(
@@ -101,6 +97,7 @@ class Sat2Rad(pl.LightningModule):
         )
 
         self.loss_fn = nn.MSELoss()
+        self.metrics = RegressionMetrics()
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -109,6 +106,7 @@ class Sat2Rad(pl.LightningModule):
         loss = self.loss_fn(y_hat, y)
 
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+        self.metrics.eval(self, y_hat, y, "train", self.device)
 
         return loss
 
@@ -117,12 +115,14 @@ class Sat2Rad(pl.LightningModule):
         y_hat = self(batch)
         loss = self.loss_fn(y_hat, y)
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+        self.metrics.eval(self, y_hat, y, "train", self.device)
 
     def test_step(self, batch, batch_idx):
         _, y = batch
         y_hat = self(batch)
         loss = self.loss_fn(y_hat, y)
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
+        self.metrics.eval(self, y_hat, y, "train", self.device)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters())
@@ -136,12 +136,8 @@ class Sat2Rad(pl.LightningModule):
 
         # x = x.contiguous().view(-1, 11, 256, 256)
         # x = self.cnn_encoder(x).view(2, 5, 64, 256, 256)
-        batch_size = x.size(0)
 
-        hidden_state = self.temporal_encoder.get_init_states(
-            batch_size=batch_size, device=self.device
-        )
-        temporal_encoded, state = self.temporal_encoder(x, hidden_state)
+        temporal_encoded, state = self.temporal_encoder(x)
 
         y_hat = self.head(temporal_encoded[:, -1, :, :, :])
 

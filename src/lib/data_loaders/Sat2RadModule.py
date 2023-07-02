@@ -204,7 +204,6 @@ class Sat2RadDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=12,
             drop_last=True,
-            shuffle=True,
         )
 
     def val_dataloader(self):

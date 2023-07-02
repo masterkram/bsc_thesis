@@ -6,33 +6,32 @@ A particularly strong threat is posed by rain storms and thunderstorms. Storms a
 \medskip
 
 At present meteorologists are able to successfully predict many instances of precipitation. Techniques that are used in practice range from manual analysis of current weather data (e.g radar or satellite images) to complex physics based simulations of our atmosphere with Numerical Weather Prediction (\textsc{NWP}) models.
-Various traditional precipitation nowcasting methods are based on \textit{optical flow}. Optical flow functions in two steps, first cumulonimbus clouds are identified, and then their movement is tracked to predict the location of precipitation. Thus in this the case, the \textit{cell-lifecycle} \cite{noaas-national-weather-service-no-date} is not taken into account \cite{prudden2020review}.
+Various short term forecasting methods are based on \textit{optical flow}. Optical flow functions in two steps, first cumulonimbus (storm) clouds are identified, and then their movement is tracked to predict the location of precipitation. Thus in this case, the forming and dissipation of clouds known as a \textit{cell-lifecycle} \cite{noaas-national-weather-service-no-date} is not taken into account \cite{prudden2020review}.
 \medskip
 
-Machine Learning (\textsc{ML}) approaches have also been developed to predict precipitation. An improvement of machine learning models over \textsc{NWP} models is that they are much faster to produce predictions, thus ML models are more suitable for real-time or near-real-time predictions, such as required in disaster response and energy management. According to the universal approximation theorem \cite{cybenko-1989}, deep neural networks have the property of being able to approximate any function provided they have the correct weights, thus it is suggested that machine learning models can incorporate sources of predictability beyond optical flow such as the cell-lifecycle among others \cite{prudden2020review}.
+Machine Learning (\textsc{ML}) approaches have also been developed to predict precipitation.
+An improvement of machine learning models over \textsc{NWP} models is that they are much faster to produce predictions, thus ML models are more suitable for real-time or near-real-time predictions, such as required in disaster response and energy management. These short term predictions are referred to as \textit{nowcasts}. According to the universal approximation theorem \cite{cybenko-1989}, deep neural networks have the property of being able to approximate any function provided they have the correct weights, thus it is suggested that machine learning models can incorporate sources of predictability beyond optical flow such as the \textit{cell-lifecycle}.
+Other suggested sources of predictability are: the elevation of terrain, convergence lines and the current time among others \cite{prudden2020review}.
 \medskip
 
-Thus far most machine learning approaches for precipitation nowcasting have focused on predicting a next frame in a time series of radar reflectivity data \cite{shi2017deep, convlstm, rainet}. However taking this approach may eliminate the possibility of learning the cell-lifecycle, due to the fact that the model only sees precipitation itself but not the cloud that is causing the precipitation.
+Thus far most machine learning approaches for precipitation nowcasting have focused on predicting future frames of currently available radar data \cite{shi2017deep, convlstm, rainet}. However taking this approach may eliminate the possibility of learning the \textit{cell-lifecycle}, due to the fact that the model only sees precipitation itself but not the cloud that is causing the precipitation.
 \medskip
 
 
-We propose to use multi-spectral satellite data to learn spatio-temporal mappings between sequences of satellite data and precipitation data in the near future. If this is successful \textit{cumulonimbus} clouds could be predicted from when they are mere \textit{cumulus} clouds and prior. An additional advantage is that contrary to radar data, satellite data is readily available over oceans and remote communities which allows for the prediction of precipitation over these regions.
+We propose to use multi-spectral satellite data to learn spatio-temporal mappings between sequences of satellite data and precipitation data in the near future. A well performing model could predict storm clouds when these clouds are still forming. An additional advantage is that contrary to radar data, satellite data is readily available over oceans and remote communities (See figure \ref{fig:radar-availability}) which allows for the prediction of precipitation over these regions.
 \smallskip
 
 \subsection{Problem Formulation}
 We consider precipitation nowcasting as a self-supervised problem. In self-supervised tasks, explicit labels are not provided, but rather we can derive labels from the raw data itself, which is often the case with time-series data. Consequently, we can utilize established techniques in supervised learning to address our research problem. The prediction of labels can be accomplished through two approaches: predicting discrete classes that correspond to different rain intensity intervals, or conducting pixel-level regression to learn the precise values of precipitation.
-\\
-Predicting the labels can be done in two ways, either predicting discrete classes mapping to rain intensity intervals, or by performing pixel level regression to learn the exact values of precipitation.
 
 \subsubsection{Regression Formulation} Consider a dataset \{X, Y\} consisting of pairs of input-output sequences indexed by $i \in \mathbb{N}$,
 %where each input sequence represents a temporal sequence of $t$ satellite images with height $H$, width $W$ and $c$ channels.
 Let $$X = \{x^{(i)} \in \mathbb{R}^{t \times h \times w \times c}\} \forall i$$ 
 where $x^{(i)}$ is a tensor of dimension $t \times h \times w \times c$ representing the sequence of satellite images at position $i$, having $t$ time-steps, $h$ height, $w$ width and $c$ channels.
-We decided to conduct our experiments using $t = 5$, allowing for 1 hour and 15 minutes of temporal data, $h = 256$, $w = 256$, and $c = 12$.
 The set of output sequences is denoted as $$Y = \{y^{(i)} \in \mathbb{R}^{w\times h}\}\forall i$$
 where $y^{(i)}$ represents the $i^{th}$ $h \times w$ dimensional tensor with each pixel being a real number collected by the radar reflectivity reading.
-Here the width and height are the same as in the input sequence: $w = 256$ and $h = 256$.
-The problem is formulated as finding a probability mass function f(x). This function must minimize a chosen distance function $\mathcal{D}$ as follows:
+Here the width and height are the same as in the input sequence.
+The problem is formulated as finding a function f(x). This function must minimize a chosen distance function $\mathcal{D}$ as follows:
 Let $\hat{Y} = \{p(x^{(i)})\}\forall i$, representing the predicted outputs for each sequence of satellite images and identical in dimensions to $y^{(i)}$.
 find f(x) such that $\mathcal{D}(\hat{Y}, Y)$ is minimized.
 
@@ -56,8 +55,7 @@ find p(x) such that $E(\hat{Y}, Y)$ is minimized.
 
 This research question will be answered by looking at the following sub research questions:
 \begin{enumerate}
-    \item \textit{what is necessary to build a well performing model ?}
-    \item \textit{what methods can be used to create this model ?}
-    \item \textit{what is the effectiveness of the trained model ?}
-    \item \textit{what are the conditions under which the model can and cannot be used ?}
+    \item \textit{how must data be preprocessed and aggregated to create a model capable of predicting precipitation based on satellite data?}
+    \item \textit{How can the process of training be simplified to be able to experiment with different architectures ?}
+    \item \textit{what model architecture performs the best based on established metrics for classification and regression ?}
 \end{enumerate}

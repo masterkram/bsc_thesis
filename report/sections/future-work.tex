@@ -1,0 +1,14 @@
+A core issue with this problem is data imbalance. There is data imbalance at two levels
+first of all at the radar image level, frequencies for pixels containing rain are much lower than the opposite.
+Secondly at the dataset level, the training, validation and test datasets contain different amounts of rain
+which may bias the scores a model obtains. We should create
+
+Testing other loss funcitions. dice loss
+
+
+Ensembling
+
+
+which should be properly not only rain is much less frequent than no rain but
+there can be biases between the overall amount of rain in the training, validation and testing datasets which may lead to
+incorrect evaluations on how the models are performing.

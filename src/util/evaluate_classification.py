@@ -17,7 +17,9 @@ class ClassifierMetrics:
         self.metrics = [
             {
                 "name": x["name"],
-                "metric": x["metric"](num_classes=num_classes, task=task),
+                "metric": x["metric"](
+                    num_classes=num_classes, task=task, average="macro"
+                ),
             }
             for x in metrics_database
             if x["name"] in metrics

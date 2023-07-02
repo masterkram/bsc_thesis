@@ -43,4 +43,4 @@ def find_matching_string(array: List, date: str) -> int:
 
 def get_next_sequence(sequence_length: int, selection: str, array: List) -> List:
     start_index = find_matching_string(array, selection)
-    return (start_index, start_index + sequence_length)
+    return (start_index, start_index + sequence_length - 1)

@@ -40,7 +40,7 @@ def importer_sat2rad() -> (
         sequence_len_radar=settings.output_size.sequence_length,
         splits={"train": 0.8, "val": 0.1, "test": 0.1},
         regression=False,
-        dataset_type=DatasetType.ClassSequence,
+        dataset_type=DatasetType.ClassSlidingWindow,
     )
     data_module.prepare_data()
     data_module.setup(None)

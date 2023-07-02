@@ -33,6 +33,7 @@ from lib.loss.glou import giou_loss
 from lib.loss.focal_loss import FocalLoss
 from layers.Lstm2 import ConvLSTMBlock
 from util.evaluate_classification import ClassifierMetrics
+from lib.loss.dice import DiceLoss
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
@@ -52,6 +53,7 @@ def save_viz(image: np.ndarray, gt: np.ndarray, sat: np.ndarray, idx):
     axes[-1, -1].set_title("prediction")
     axes[-1, -1].imshow(image)
 
+    fig.tight_layout()
     save_path = f"{SAVE_FOLDER}experiment-{idx}.png"
     fig.savefig(save_path)
 
@@ -65,23 +67,28 @@ class Sat2Rad(pl.LightningModule):
     def __init__(self):
         super().__init__()
 
-        self.temporal_encoder = ConvLSTM(
-            input_dim=12,
-            hidden_dim=120,
-            kernel_size=3,
-            num_layers=2,
+        self.initial_encode = nn.Sequential(
+            nn.Conv2d(12, 120, (3, 3), 1, padding=1),
+            nn.MaxPool2d((2, 2), 2),
+            nn.Conv2d(120, 256, (3, 3), 1, padding=1),
+            nn.Conv2d(256, 256, (3, 3), 1, padding=1),
+            nn.Conv2d(256, 256, (3, 3), 1, padding=1),
+            nn.MaxPool2d((2, 2), 2),
         )
-        # # self.temporal_encoder = ConvLSTMBlock(12, 64)
+
+        self.temporal_encoder = ConvLSTM(
+            input_dim=256,
+            hidden_dim=384,
+            kernel_size=3,
+            num_layers=3,
+        )
 
         self.spatial_aggregator = nn.Sequential(
-            nn.Conv2d(120, 64, (3, 3), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(64, 32, (3, 3), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(32, 16, (5, 5), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(16, 8, (3, 3), 1, "same"),
-            nn.LogSoftmax(dim=1),
+            nn.Conv2d(384, 64, (3, 3), 1, "same"),
+            nn.Tanh(),
+            nn.Conv2d(64, 32, (5, 5), 1, "same"),
+            nn.Tanh(),
+            nn.Conv2d(32, 8, (3, 3), 1, "same"),
         )
         weigths = torch.tensor(
             [
@@ -96,20 +103,32 @@ class Sat2Rad(pl.LightningModule):
             ]
         )
 
-        self.loss_fn = nn.NLLLoss(weight=weigths)
+        self.loss_fn = DiceLoss(weight=weigths)
         self.metrics = ClassifierMetrics(settings.training.metrics)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
 
+        h = torch.nn.functional.one_hot(y, 8).view(1, 8, 64, 64)
+
         y = torch.squeeze(y, 1)
+        print(h.shape, "h")
         y_hat = self(batch)
 
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss_fn(y_hat, h)
 
         test = torch.unique(torch.argmax(y_hat, 1))
         if torch.sum(test) != 0:
             write_log(f"not 0 :smile: == {test}")
+
+        if batch_idx % 50 == 0:
+            write_log("saving visualization for batch")
+            save_viz(
+                torch.argmax(y_hat, 1).view(64, 64).cpu().detach().numpy(),
+                y.view(64, 64).cpu().detach().numpy(),
+                x.view(5, 12, 256, 256).cpu().detach().numpy(),
+                batch_idx,
+            )
 
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
 
@@ -119,20 +138,25 @@ class Sat2Rad(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         _, y = batch
+        h = torch.nn.functional.one_hot(y, 8).view(1, 8, 64, 64)
+        print(h.shape, "h")
+
         y = torch.squeeze(y, 1)
 
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss_fn(y_hat, h)
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
 
         self.metrics.evaluate_classification(self, y_hat, y, "val", self.device)
 
     def test_step(self, batch, batch_idx):
         _, y = batch
+        h = torch.nn.functional.one_hot(y, 8).view(1, 8, 64, 64)
+
         y = torch.squeeze(y, 1)
 
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss_fn(y_hat, h)
         self.log("test_loss", loss, on_epoch=True)
         self.metrics.evaluate_classification(self, y_hat, y, "test", self.device)
 
@@ -146,18 +170,15 @@ class Sat2Rad(pl.LightningModule):
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, _ = batch
 
-        _, state = self.temporal_encoder(x)
+        x = x.view(-1, settings.input_size.channels, 256, 256)
+        x = self.initial_encode(x)
+        x = x.view(1, settings.input_size.sequence_length, 256, 64, 64)
 
-        # # print(state, "this is state")
-        # print(len(state[0]), "this is state 0 is h ?")
+        x, state = self.temporal_encoder(x)
 
-        # embedding = self.position_embedding(state[-1][0])
-
-        # xi = self.temporal_agg(embedding)
-
-        # y_hat = self.head(xi)
-
-        return self.spatial_aggregator(state[-1][0])
+        # return self.spatial_aggregator(state[-1][0])
+        print(x.shape)
+        return self.spatial_aggregator(x[:, -1, :, :, :].view(1, -1, 64, 64))
 
 
 @step(

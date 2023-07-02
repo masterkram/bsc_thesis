@@ -1,4 +1,4 @@
-\documentclass[acmtog, authorversion]{acmart}
+\documentclass[acmtog, screen, balance]{acmart}
 \usepackage[htt]{hyphenat}
 \usepackage{graphicx}
 \usepackage{lipsum}
@@ -8,6 +8,7 @@
 \usepackage{fontawesome5}
 \usepackage{listings}
 \usepackage{minted}
+\usepackage{xcolor}
 
 \newlist{questions}{enumerate}{2}
 \setlist[questions,1]{label=\textbf{RQ\arabic*.},ref=RQ\arabic*}
@@ -18,13 +19,14 @@
   \providecommand\BibTeX{{%
     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
 
-\setcopyright{cc}
+% \setcopyright{cc}
 \copyrightyear{2023}
 \acmYear{2023}
 
-\acmConference[TScIT 39]{39$^{th}$ Twente Student Conference on IT}{July 8,
+\acmConference[TScIT 39]{39$^{th}$ Twente Student Conference on IT}{July 7,
   2023}{Enschede, The Netherlands}
-
+\acmDOI{}
+\acmISBN{}
 
 \begin{document}
 
@@ -44,21 +46,30 @@
 
 \begin{abstract}
 \section*{Abstract}
-The forecasting of rain is a complex problem with centuries of scientific work. The implications of weather for individuals and companies continue to be important. Machine Learning approaches have been shown to outperform state of the art physics based models of weather for short term predictions. We introduce a new type of model \textbf{Sat2Rad}. Our model takes as input multi-spectral satellite data and outputs radar reflectivity at a set of time-steps ranging from 15 to 180 minutes in the future. This model is novel for precipitation nowcasting because it uses several satellite spectral bands instead of using radar data as input.
+The forecasting of rain is a complex problem with centuries of scientific work.
+The implications of weather for individuals and companies continue to be important.
+Machine Learning approaches have been shown to outperform state of the art physics based models of weather for short term predictions.
+Using multi-spectral satellite images as out input and radar reflectivity as the target.  
+We investigate three different types of models: 3D U-Net, ConvLSTM and ConvLSTM with self attention.
+We found that ConvLSTM outperforms the other approaches for both classification and regression pixel rain intensities.
 \end{abstract}
 
-\keywords{Machine Learning, Sequence to Sequence, Radar, Satellite, Storms, Forecasting}
+\keywords{Machine Learning, Sequence to Sequence, Radar, Satellite, Storms, Forecasting, 3D U-Net, ConvLSTM, Attention Mechanism}
 
 \settopmatter{printacmref=false}
 
+
 \begin{teaserfigure}
-  \includegraphics*[width=\textwidth, trim=0in 0.0in 0in 16.0in]{images/lightning.jpg}
-  \caption{A supercell thunderstorm at twilight in SW Oklahoma.}
-  \Description{A supercell thunderstorm at twilight in SW Oklahoma.}
-  \label{fig:teaser}
+    \renewcommand{\thefootnote}{\arabic{footnote}}
+    \includegraphics*[width=\textwidth, trim=0in 0.0in 0in 16.0in]{images/lightning.jpg}
+    \caption{A supercell thunderstorm at twilight in SW Oklahoma.\protect\footnotemark}
+    \Description{A supercell thunderstorm at twilight in SW Oklahoma.}
+    \label{fig:teaser}
 \end{teaserfigure}
 
 \maketitle
+
+\footnotetext[1]{Photograph by \href{https://unsplash.com/@raychelsnr}{Raychel Sanner}, \href{https://unsplash.com/license}{Unsplash Licence}}
 
 \section{Introduction} \label{introduction}
 \input{sections/intro.tex}
@@ -79,6 +90,11 @@ The forecasting of rain is a complex problem with centuries of scientific work. 
 \section{Results}
 \input{sections/results.tex}
 
+\section{Future Work}
+\input{sections/future-work.tex}
+
+\section{Discussion}
+\input{sections/discussion.tex}
 
 \begin{figure}
     \centering
@@ -92,17 +108,26 @@ The forecasting of rain is a complex problem with centuries of scientific work. 
 \section{Conclusions}
 \input{sections/conclusion.tex}
 
-% \begin{acks}
-% I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore I would like to thank I would like to thank Dina Lazorkeno for proofreading my thesis.
-% \end{acks}
+\begin{acks}
+I would like to thank my supervisor from Elena Mocanu, for her help. Furthermore I would like to thank I would like to thank Dina Lazorkeno for proofreading my thesis.
+\end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{ref}
 
-% \newpage
+\newpage
 \appendix
+\large{Appenices}
 
 \section{Images}
+
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=400pt]{./images/full-bams-d-18-0166.1-f1.jpg}
+  \caption{Worldwide availability of radar data. Notably Oceans; the African and South American continents lack good coverage. \cite{AnOverviewofUsingWeatherRadarforClimatologicalStudiesSuccessesChallengesandPotential}}
+  \Description{}
+  \label{fig:radar-availability}
+\end{figure*}
 
 \begin{figure}[hbp]
   \centering
@@ -123,12 +148,100 @@ The forecasting of rain is a complex problem with centuries of scientific work. 
 \begin{figure}[hbp]
   \centering
   \includegraphics[width=225pt]{./images/radar_source.png}
-  \caption{Satellite Image: Infrared Channel 18UTC $12.0\mu m$}
+  \caption{Used Composite Radar Image Source. Colors mapping to 5 different radars: Den Helder, Essen, Borkum, Neuheilenbach and Herwijnen.}
   \Description{}
-  \label{fig:source}
+  \label{fig:radsource}
 \end{figure}
 
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=250pt]{./images/single_satellite.png}
+  \caption{Preprocessed Satellite Image}
+  \Description{}
+  \label{fig:satchannels}
+\end{figure}
+
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=200pt]{./images/radar_image.png}
+  \caption{Preprocessed Satellite Image}
+  \Description{}
+  \label{fig:radar-pre}
+\end{figure}
+
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=200pt]{./images/radar_binned.png}
+  \caption{Preprocessed Satellite Image}
+  \Description{}
+  \label{fig:radar-bin}
+\end{figure}
+
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=500pt]{./images/experiment-0.png}
+  \caption{Testset prediction with ConvLSTM model for 2023-03-24 12:02:00 UTC.}
+  \Description{}
+  \label{fig:convclass}
+\end{figure*}
+
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=500pt]{./images/experiment-0-unet.png}
+  \caption{Testset prediction with U-Net model for 2023-03-24 12:02:00 UTC.}
+  \Description{}
+  \label{fig:unet}
+\end{figure*}
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=500pt]{./images/experiment-0.png}
+  \caption{Testset prediction with ConvLSTM model for 2023-03-24 12:02:00 UTC.}
+  \Description{}
+  \label{fig:convclass}
+\end{figure*}
+
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=500pt]{./images/experiment-0-unet.png}
+  \caption{Testset prediction with U-Net model for 2023-03-24 12:02:00 UTC.}
+  \Description{}
+  \label{fig:unet}
+\end{figure*}
+
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=400pt]{./images/experiment-19.png}
+  \caption{Testset Prediction ConvLSTM}
+  \Description{}
+  \label{fig:experiment-19}
+\end{figure*}
+
+\begin{figure*}[hbp]
+  \centering
+  \includegraphics[width=400pt]{./images/experiment-160.png}
+  \caption{Testset Prediction 3D U-Net}
+  \Description{}
+  \label{fig:experiment-160}
+\end{figure*}
+
+\newpage
 \section{Tables}
+
+\begin{table}[]
+  \caption{Available Classes for Classification Models. Based on intervals of 10 dBZ in a interval between 0 and 60}
+  \begin{tabular}{@{}ll@{}}
+  \toprule
+  Class & dBZ range   \\ \midrule
+  0     & $(-\infty, 0]$ \\
+  1     & $(0, 10]$  \\
+  2     & $(10, 20]$  \\
+  3     & $(20, 30]$  \\
+  4     & $(30, 40]$  \\
+  5     & $(40, 50]$  \\
+  6     & $(50, 60]$  \\
+  7     & $(60, +\infty)$  \\ \bottomrule
+  \end{tabular}
+\end{table}
 
 \begin{table}[hbp]
   \caption{Available Satellite Channels.}
@@ -170,63 +283,5 @@ LZ(dBZ) & R(mm/h) & R(in/h)        & Intensity             \\ \midrule
 65      & 421     & 16.6           & Extreme/large hail    \\ \bottomrule
 \end{tabular}
 \end{table}
-
-
-\section{Listings}
-\begin{listing}
-  \begin{minted}{toml}
-    [model]
-    name = "SAT2RAD_UNET"
-    classes=8
-    
-    [model.input_size]
-    height = 256
-    width = 256
-    channels = 12
-    sequence_length = 8
-    
-    [model.output_size]
-    height = 256
-    width = 256
-    channels = 1
-    sequence_length = 1
-    
-    [model.unet]
-    kernel_size = [3, 3]
-    layers = 3
-    filters = 64
-    
-    [model.training]
-    max_epochs = 100
-    class_weights = [
-                0.01081153,
-                0.13732371,
-                0.13895907,
-                0.1416087,
-                0.14272867,
-                0.14285409,
-                0.14285709,
-                0.14285714,
-            ]
-    metrics = [
-        'acc',
-        'precision',
-        'recall',
-        'exact',
-        'f1', 
-        'jaccard'
-    ]
-    
-    [mlflow]
-    experiment_name = "sat2rad_unet"
-    experiment_tracker = "Infoplaza MLFlow"
-    
-    
-    [visualize]
-    output_dir = '../../../../../logs/'
-  \end{minted}
-  \caption{toml configuration file for U-Net Model.}
-  \label{lst:hello}
-\end{listing}
 
 \end{document}

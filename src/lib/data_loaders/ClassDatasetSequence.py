@@ -15,8 +15,9 @@ def loadFile(file: str):
 
 
 def addTimeDim(array: np.ndarray, time: str):
+    dim = 256
     now = parseTime(time).hour / 24
-    times = np.array([now]).repeat(256 * 256).reshape((1, 256, 256))
+    times = np.array([now]).repeat(dim * dim).reshape((1, dim, dim))
     return np.concatenate((array, times), axis=0)
 
 
@@ -27,11 +28,13 @@ class ClassDatasetSequence(Sat2RadDataset):
         radar_files: list[str],
         satellite_seq_len: int = 5,
         radar_seq_len: int = 12,
+        image_dim: int = 64,
     ):
         super().__init__(
             satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
         )
         self.auto = AutoAugment()
+        self.image_dim = image_dim
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
@@ -62,6 +65,8 @@ class ClassDatasetSequence(Sat2RadDataset):
 
         X = torch.from_numpy(satellite_sequence)
         y = torch.from_numpy(radar_sequence)
-        y = resize(y, [62, 62], interpolation=InterpolationMode.NEAREST)
+        y = resize(
+            y, [self.image_dim, self.image_dim], interpolation=InterpolationMode.NEAREST
+        )
 
         return X.float(), y.long()
