@@ -50,6 +50,6 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         X = torch.from_numpy(satellite_sequence)
         # y = torch.from_numpy(radar_sequence)
         y = torch.from_numpy(radar).view(1, 1660, 1340)
-        y = resize(y, [62, 62], interpolation=InterpolationMode.NEAREST)
+        y = resize(y, [300, 300], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.float()

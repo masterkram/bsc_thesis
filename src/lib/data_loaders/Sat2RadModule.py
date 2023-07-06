@@ -77,7 +77,7 @@ class Sat2RadDataModule(pl.LightningDataModule):
         elif self.dataset_type == DatasetType.SlidingWindow:
             return Sat2RadDatasetSlidingWindow
 
-        return ClassDatasetSequence
+        return Sat2RadDatasetSlidingWindow
 
     def setup(self, stage: str):
         self.sat, self.rad = self.ordered_files()
