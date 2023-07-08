@@ -6,6 +6,7 @@ from axial_attention import AxialAttention, AxialPositionalEmbedding
 
 sys.path.append("../../")
 sys.path.append("../../../")
+sys.path.append("../../../../")
 
 from zenml import step
 from torch import nn
@@ -28,9 +29,33 @@ import typed_settings as ts
 from Settings import ModelSettings, MlFlowSettings
 from util.log_utils import write_log, log_mlflow
 import torchmetrics
+from lib.loss.glou import giou_loss
+from lib.loss.focal_loss import FocalLoss
+from layers.Lstm2 import ConvLSTMBlock
+from util.evaluate_classification import ClassifierMetrics
+from lib.loss.dice import DiceLoss
 
 settings = ts.load(ModelSettings, "model", ["config.toml"])
 mlflowConfig = ts.load(MlFlowSettings, "mlflow", ["config.toml"])
+SAVE_FOLDER = "../../../../../logs/"
+
+
+def save_viz(image: np.ndarray, gt: np.ndarray, sat: np.ndarray, idx):
+    fig, axes = plt.subplots(2, 5)
+    for i, a in enumerate(axes[0]):
+        a.imshow(sat[i][0])
+
+    axes[-1, 0].set_title("ground truth")
+    axes[-1, 0].imshow(gt)
+    axes[-1, 1].axis("off")
+    axes[-1, 2].axis("off")
+    axes[-1, 3].axis("off")
+    axes[-1, -1].set_title("prediction")
+    axes[-1, -1].imshow(image)
+
+    fig.tight_layout()
+    save_path = f"{SAVE_FOLDER}experiment-{idx}.png"
+    fig.savefig(save_path)
 
 
 mlflow_settings = MLFlowExperimentTrackerSettings(
@@ -38,124 +63,122 @@ mlflow_settings = MLFlowExperimentTrackerSettings(
 )
 
 
-def weight_function(target):
-    result = target * 255
-    result = target[target < 2] = 1
-    mask = torch.logical_and(target < 5, target >= 2)
-    result = target[mask] = 2
-    mask = torch.logical_and(target < 10, target >= 5)
-    result = target[mask] = 5
-    mask = torch.logical_and(target < 30, target >= 10)
-    result = target[mask] = 10
-    result = target[target >= 30] = 30
-    return result
-
-
-def balanced_mae(output, target):
-    return torch.mean(torch.abs((target - output) * weight_function(target)))
-
-
 class Sat2Rad(pl.LightningModule):
     def __init__(self):
         super().__init__()
 
+        self.initial_encode = nn.Sequential(
+            nn.Conv2d(12, 120, (3, 3), 1, padding=1),
+            nn.MaxPool2d((2, 2), 2),
+            nn.Conv2d(120, 256, (3, 3), 1, padding=1),
+            nn.Conv2d(256, 256, (3, 3), 1, padding=1),
+            nn.Conv2d(256, 256, (3, 3), 1, padding=1),
+            nn.MaxPool2d((2, 2), 2),
+        )
+
         self.temporal_encoder = ConvLSTM(
-            input_size=(256, 256),
-            input_dim=11,
-            hidden_dim=[64],
-            kernel_size=(3, 3),
-            num_layers=1,
-            peephole=True,
-            batchnorm=False,
-            batch_first=True,
-            activation=F.tanh,
+            input_dim=256,
+            hidden_dim=384,
+            kernel_size=3,
+            num_layers=3,
         )
 
         self.spatial_aggregator = nn.Sequential(
-            nn.Conv2d(64, 32, (3, 3), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(32, 16, (3, 3), 1, "same"),
-            nn.ReLU(),
-            nn.Conv2d(16, 14, (3, 3), 1, "same"),
-            nn.Softmax2d(),
+            nn.Conv2d(384, 64, (3, 3), 1, "same"),
+            nn.Tanh(),
+            nn.Conv2d(64, 32, (5, 5), 1, "same"),
+            nn.Tanh(),
+            nn.Conv2d(32, 8, (3, 3), 1, "same"),
         )
-        weights = torch.tensor(
+        weigths = torch.tensor(
             [
-                0.0001,
-                0.001,
-                0.002,
-                0.003,
-                0.004,
-                0.009,
-                0.01,
-                0.01,
-                0.04,
-                0.05,
-                0.12,
-                0.15,
-                0.2,
-                0.4009,
+                0.01081153,
+                0.13732371,
+                0.13895907,
+                0.1416087,
+                0.14272867,
+                0.14285409,
+                0.14285709,
+                0.14285714,
             ]
         )
-        self.loss_fn = nn.CrossEntropyLoss(weight=weights)
-        self.iou = torchmetrics.JaccardIndex("multiclass", num_classes=14)
-        self.accuracy = torchmetrics.Accuracy("multiclass", num_classes=14)
+
+        self.loss_fn = DiceLoss(weight=weigths)
+        self.metrics = ClassifierMetrics(settings.training.metrics)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
 
+        h = torch.nn.functional.one_hot(y, 8).view(1, 8, 64, 64)
+
+        y = torch.squeeze(y, 1)
+        print(h.shape, "h")
         y_hat = self(batch)
-        print("size check y = ", y.size(), "y_hat =", y_hat.size())
 
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss_fn(y_hat, h)
 
-        self.log("train_loss", loss, on_epoch=True)
-        self.iou(y_hat, y)  # compute metrics
-        self.log("train_iou_step", self.iou)  # log metric object
+        test = torch.unique(torch.argmax(y_hat, 1))
+        if torch.sum(test) != 0:
+            write_log(f"not 0 :smile: == {test}")
 
-        self.accuracy(y_hat, y)  # compute metrics
-        self.log("train_acc_step", self.accuracy)  # log metric object
+        if batch_idx % 50 == 0:
+            write_log("saving visualization for batch")
+            save_viz(
+                torch.argmax(y_hat, 1).view(64, 64).cpu().detach().numpy(),
+                y.view(64, 64).cpu().detach().numpy(),
+                x.view(5, 12, 256, 256).cpu().detach().numpy(),
+                batch_idx,
+            )
+
+        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+
+        self.metrics.evaluate_classification(self, y_hat, y, "train", self.device)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
         _, y = batch
+        h = torch.nn.functional.one_hot(y, 8).view(1, 8, 64, 64)
+        print(h.shape, "h")
+
+        y = torch.squeeze(y, 1)
+
         y_hat = self(batch)
-        print("size check y = ", y.size(), "y_hat =", y_hat.size())
-        loss = self.loss_fn(y_hat, y)
-        self.log("val_loss", loss, on_epoch=True)
-        self.iou(y_hat, y)  # compute metrics
-        self.log("val_iou_step", self.iou)  # log metric object
-        self.accuracy(y_hat, y)  # compute metrics
-        self.log("train_acc_step", self.accuracy)  # log metric object
+        loss = self.loss_fn(y_hat, h)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+
+        self.metrics.evaluate_classification(self, y_hat, y, "val", self.device)
 
     def test_step(self, batch, batch_idx):
         _, y = batch
+        h = torch.nn.functional.one_hot(y, 8).view(1, 8, 64, 64)
+
+        y = torch.squeeze(y, 1)
+
         y_hat = self(batch)
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss_fn(y_hat, h)
         self.log("test_loss", loss, on_epoch=True)
-        self.iou(y_hat, y)
-        self.log("test_iou_step", self.iou)
-        self.accuracy(y_hat, y)  # compute metrics
-        self.log("train_acc_step", self.accuracy)  # log metric object
+        self.metrics.evaluate_classification(self, y_hat, y, "test", self.device)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters())
         return optimizer
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        return torch.argmax(self(batch), 1)
+        return torch.argmax(self(batch), dim=1)
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, _ = batch
-        hidden_state = self.temporal_encoder.get_init_states(
-            batch_size=1, device=self.device
-        )
-        temporal_encoded, state = self.temporal_encoder(x, hidden_state)
 
-        y_hat = self.spatial_aggregator(temporal_encoded[:, -1, :, :, :])
+        x = x.view(-1, settings.input_size.channels, 256, 256)
+        x = self.initial_encode(x)
+        x = x.view(1, settings.input_size.sequence_length, 256, 64, 64)
 
-        return y_hat
+        x, state = self.temporal_encoder(x)
+
+        # return self.spatial_aggregator(state[-1][0])
+        print(x.shape)
+        return self.spatial_aggregator(x[:, -1, :, :, :].view(1, -1, 64, 64))
 
 
 @step(
@@ -167,7 +190,7 @@ def trainer(train_dataloader: DataLoader, val_dataloader: DataLoader) -> nn.Modu
     write_log(f"training {settings.name}")
     model = Sat2Rad()
 
-    trainer = pl.Trainer(max_epochs=5)
+    trainer = pl.Trainer(max_epochs=50)
 
     mlflow.pytorch.autolog()
 

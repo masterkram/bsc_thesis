@@ -1,0 +1,12 @@
+In this paper we investigate possible methods to create a model capable of
+predicting precipitation based on satellite images.
+We propose and train 3 different model architectures. The trained models are benchmarked and compared based on several metrics.
+All models are framed in two different tasks: classification and regression.
+In the classification task we train a model to predict from 8 classes mapping to rain intensity categories. In pixel level regression we do not modify the 
+radar reflectivity data and we train a pixel-level regression model.
+We find that all trained models are capable of predicting some precipitation but they require improvements to perform well in practice.
+This can be attributed to relatively low amounts of data being used, difference in resolution
+of the two types of data, data imbalances and the complexity of the problem space. 
+The model that achieves the best score over the test dataset is the ConvLSTM model. The attention mechanism
+as used currently seems to make predictions worse for both classification and regression. More testing needs to be done to state certainly if ConvLSTM surpasses
+the performance of 3D U-Net since form a visual standpoint U-Net appears to give more meteorologically viable results.

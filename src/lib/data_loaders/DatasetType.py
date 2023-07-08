@@ -1,7 +1,8 @@
-from enum import Enum, auto
+from enum import Enum
 
 
 class DatasetType(Enum):
-    Sequence = auto()
-    SlidingWindow = auto()
-    ClassSequence = auto()
+    Sequence = 1
+    SlidingWindow = 2
+    ClassSequence = 3
+    ClassSlidingWindow = 4

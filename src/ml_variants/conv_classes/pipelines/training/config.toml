@@ -4,7 +4,7 @@ name = "Binned SAT2RAD"
 [model.input_size]
 height = 256
 width = 256
-channels = 11
+channels = 12
 sequence_length = 5
 
 [model.output_size]
@@ -22,6 +22,9 @@ filters = 64
 kernel_size = [3,3]
 layers = 3
 filters = 64
+
+[model.training]
+metrics = ['acc', 'precision', 'recall', 'exact', "f1", "jaccard"]
 
 
 [training]

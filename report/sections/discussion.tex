@@ -1,0 +1,9 @@
+
+Despite training for 50 epochs Models could be under-fit, this can be verified by training for more than 50 epochs.
+For U-Net the experimental setup is slightly different since we increased the available satellite timesteps from 5 to 8 to support the 3D Encoding,
+which gives the U-Net model an advantage with a larger context than other models, this is however not such a large problem since the context can be increased for the other
+networks and they are currently performing better, based on the metrics.
+One difficulty of this problem is finding good metrics that quantify the skill of the model accurately.
+The jaccard index works well. However from the visual inspection of predictions we would assume that U-Net is performing better. Based on these two conflicting measures
+it can be put into doubt if the ConvLSTM actually performs better than the U-Net model.
+The F1 score should also to provide a good evaluation for imbalanced prediction. However the F1 score is very high for all models this leads us to believe that the aggregation of the F1 score was not preformed correctly.

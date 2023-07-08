@@ -2,26 +2,8 @@ import math
 from Sat2RadDataset import Sat2RadDataset
 import numpy as np
 import torch
-
-
-def length_sliding_window_satellite(file_number: int, sequence_length: int) -> int:
-    return math.floor(
-        sum([x / sequence_length for x in range(sequence_length, file_number)])
-    )
-
-
-def length_sliding_window_radar(
-    file_number: int, sequence_length: int, sequence_length_satellite: int
-):
-    radarRatio = 3
-    res = 0
-    for i in range(0, 4):
-        ls = (
-            (file_number - radarRatio * sequence_length_satellite + 1) - radarRatio * i
-        ) // sequence_length
-        res += ls
-
-    return res
+from util.parse_time import get_next_sequence, find_matching_string
+from torchvision.transforms.functional import resize, InterpolationMode
 
 
 class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
@@ -33,23 +15,14 @@ class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
         radar_seq_len: int = 12,
     ):
         super().__init__(
-            satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
+            satellite_files,
+            radar_files,
+            "",
+            [],
+            satellite_seq_len,
+            radar_seq_len,
+            stride=True,
         )
-
-        len_sat_sliding = length_sliding_window_satellite(
-            self.sat_len, self.satellite_seq_len
-        )
-        len_rad_sliding = length_sliding_window_radar(
-            self.rad_len, self.radar_seq_len, self.satellite_seq_len
-        )
-
-        print(f"calculating lengths, {len_sat_sliding} -> {len_rad_sliding}")
-
-        self.len: int = min(len_sat_sliding, len_rad_sliding)
-
-    def __len__(self) -> int:
-        "Denotes the total number of samples"
-        return self.len
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
@@ -58,11 +31,11 @@ class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
         upper_bound_satellite = index + self.satellite_seq_len
 
         # beginning of the day has 2 extra images before satellite image
-        lower_bound_radar = upper_bound_satellite * 3 + 1
-        upper_bound_radar = lower_bound_radar + self.radar_seq_len
-
-        assert upper_bound_radar - lower_bound_radar == self.radar_seq_len
-        assert upper_bound_satellite - lower_bound_satellite == self.satellite_seq_len
+        lower_bound_radar, upper_bound_radar = get_next_sequence(
+            self.radar_seq_len,
+            self.satellite_files[upper_bound_satellite],
+            self.radar_files,
+        )
 
         satellite_sequence = [
             np.load(file)
@@ -70,20 +43,19 @@ class Sat2RadDatasetSlidingWindow(Sat2RadDataset):
                 lower_bound_satellite:upper_bound_satellite
             ]
         ]
-        radar_sequence = [
-            np.load(file)
-            for file in self.radar_files[lower_bound_radar:upper_bound_radar]
-        ]
+        # radar_sequence = [
+        # np.load(file)
+        # for file in self.radar_files[lower_bound_radar:upper_bound_radar]
+        # ]
 
-        assert len(satellite_sequence) == self.satellite_seq_len
-        assert len(radar_sequence) == self.radar_seq_len
+        radar = np.load(self.radar_files[upper_bound_radar])
 
         satellite_sequence = np.array(satellite_sequence)
-        radar_sequence = np.array(radar_sequence)
+        # radar_sequence = np.array(radar_sequence)
 
         X = torch.from_numpy(satellite_sequence)
-        X = X.type(torch.float32)
-        y = torch.from_numpy(radar_sequence)
-        y = y.type(torch.float32)
+        # y = torch.from_numpy(radar_sequence)
+        y = torch.from_numpy(radar).view(1, 1660, 1340)
+        y = resize(y, [256, 256], interpolation=InterpolationMode.NEAREST)
 
-        return X, y.float()
+        return X.float(), y.float()

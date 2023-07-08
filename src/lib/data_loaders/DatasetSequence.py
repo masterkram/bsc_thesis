@@ -2,7 +2,8 @@ import torch
 import numpy as np
 from Sat2RadDataset import Sat2RadDataset
 import math
-from util.parse_time import get_next_sequence
+from util.parse_time import get_next_sequence, find_matching_string
+from torchvision.transforms.functional import resize, InterpolationMode
 
 
 class Sat2RadDatasetSequence(Sat2RadDataset):
@@ -16,14 +17,6 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
         super().__init__(
             satellite_files, radar_files, "", [], satellite_seq_len, radar_seq_len
         )
-
-    def __len__(self) -> int:
-        "Denotes the total number of samples"
-        seq_amount_sat = self.sat_len // self.satellite_seq_len
-        seq_amount_rad = (self.rad_len - self.satellite_seq_len * 3 - 4) // (
-            3 * self.satellite_seq_len
-        )
-        return min(seq_amount_sat, seq_amount_rad) - 1
 
     def __getitem__(self, index: int) -> tuple[torch.tensor, torch.tensor]:
         "Generates one sample of data"
@@ -44,15 +37,19 @@ class Sat2RadDatasetSequence(Sat2RadDataset):
                 lower_bound_satellite:upper_bound_satellite
             ]
         ]
-        radar_sequence = [
-            np.load(file)
-            for file in self.radar_files[lower_bound_radar:upper_bound_radar]
-        ]
+        # radar_sequence = [
+        # np.load(file)
+        # for file in self.radar_files[lower_bound_radar:upper_bound_radar]
+        # ]
+
+        radar = np.load(self.radar_files[upper_bound_radar])
 
         satellite_sequence = np.array(satellite_sequence)
-        radar_sequence = np.array(radar_sequence)
+        # radar_sequence = np.array(radar_sequence)
 
         X = torch.from_numpy(satellite_sequence)
-        y = torch.from_numpy(radar_sequence)
+        # y = torch.from_numpy(radar_sequence)
+        y = torch.from_numpy(radar).view(1, 1660, 1340)
+        y = resize(y, [300, 300], interpolation=InterpolationMode.NEAREST)
 
         return X.float(), y.float()
