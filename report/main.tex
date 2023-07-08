@@ -97,6 +97,10 @@ We propose to use multi-spectral satellite data to learn spatio-temporal mapping
 % Satellite data, on the other hand, can provide a global view of weather patterns and can be used to fill in gaps in radar coverage. Satellites can also provide information about cloud temperature, humidity, and other atmospheric conditions that can be used to infer the presence of precipitation. Additionally, satellite data can be useful for predicting the onset and duration of precipitation events, which can be valuable information for planning and emergency response.
 
 % However, using satellite data for precipitation nowcasting also presents some challenges, such as the need to develop accurate algorithms for translating satellite data into precipitation estimates. These algorithms must take into account factors such as the altitude of the clouds, the types of precipitation (e.g. rain, snow, or hail), and the intensity of the precipitation. Despite these challenges, the use of satellite data for precipitation nowcasting shows great promise and has the potential to improve our ability to predict precipitation in a variety of settings.
+\subsection{Problem Formulation}
+We can therefore address our problem as a self supervised problem.
+With Satellite images are defined as $S_t(\theta,\phi,\lambda) \mapsto \begin{bmatrix} 1, 2, 3\end{bmatrix}$.
+
 
 \textbf{RQ1}: \textit{How can a deep learning model be trained to predict radar data with multi-spectral satellite data ?}
 \smallskip
