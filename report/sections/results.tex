@@ -1,0 +1,66 @@
+% The metrics for our experiments are available in table 1. The scores are very high for Accuracy, Recall, F1Score and Precision (>= 90), we even 
+% have for ConvLSTM 53\% exact matches, which means that the predicted image was exactly the ground truth that occurred.
+% however this does not mean that the model is correct, due to a very high data imbalance towards 0 or no rain in the dataset.
+% The most important metric that actually quantifies the performance of the model is the Jaccard Index. The best performing model following this metric is the plain ConvLSTM model
+% with a Convolutional head. If we compare both U-Net and ConvLSTM models visually \ref{fig:convclass} \ref{unet} we can see that ConvLSTM is more confident in predicting high rain intensity
+% while the U-Net model predicts only low levels of rain, however it is more accurate at predicting the area of rain in the ground truth. Another remark is that all metrics seem to be the same across the models.
+% This can occur if the false positive rate is equal to the false negative rate.
+In this section we will present the results of the experiments.
+
+\subsection{Data}
+After preprocessing we obtain \texttt{3331} satellite files and \texttt{10348} radar files see table (\ref{tab:data}).
+The storage size of which is equal to \texttt{387.6} Gigabytes.
+We split the data with a \texttt{0.8} split for testing \texttt{0.1} for validation and testing.
+A sample of a preprocessed satellite file can be seen in Figure \ref{fig:satchannels}.
+From this satellite image we can see that the area has been cropped from the original.
+%This image is also in a different map projection from the original, the preprocessing has produced a mercator map projection,
+%from the original geostationary projection.
+The area visible corresponds to the European Netherlands in the center, on the left we have south east England and on the right we have Germany and Denmark.
+On the south of the image we can observe clouds in all visual and infrared channels.
+On the water vapour channels we can also see that there is higher degree of water vapour in the south and middle of the image, compared to the other parts of the image.
+A preprocessed radar image can be seen in Figure \ref{fig:radar-pre}. A binned radar image can be seen in Figure \ref{fig:radar-bin} where each pixel is represented by one of the eight classes (table \ref{tab:dbzz}).
+
+\subsection{Trained Classification Models}
+Trained classification models are listed in table \ref{tab:class}.
+We focus on the jaccard index to evaluate the best performing model due to class imbalance.
+Based on the jaccard index of \textbf{0.1249} the best performing model is the ConvLSTM without using the attention mechanism. This same model also managed to
+predict 53\% of the radar images in the test set exactly. The model most likely obtains a perfect score when there is no rain in the image and the expected output therefore is a empty image.
+In second place we have the ConvLSTM with attention, and in the last place we have the 3D U-Net. We have also visually analyzed the predictions made by the models which can be seen in figure \ref{fig:convclass} and figure \ref{fig:unet-pred}.
+The U-Net based model predicts low amounts of rain but generally predicts the position and movement of clouds better. Meanwhile ConvLSTM based models are more eager
+to predict higher rainfall classes and therefore look similar to the target, however when investigating the outputs for the entire test set it seems that the ConvLSTM based model does not learn the spatio-temporal patterns
+as well as the U-Net. This can be observed in Figure \ref{fig:experiment-19}, where the LSTM based model does not segment areas covered by clouds, but seemingly randomly predicting rainfall over the whole Netherlands.
+Compare this with figure \ref{fig:experiment-160} where we can clearly see that U-Net based model knows that the incoming cloud from the south west, will produce precipitation.
+
+
+\subsection{Trained Regression Models}
+Trained classification models are listed in table \ref{tab:reg}. Similar to the classification models the ConvLSTM
+has the lowest error for the regression experiments. From an analysis of the metrics it can be seen that the U-Net based model performs worse compared to the ConvLSTM variant.
+The balanced MSE and balanced MAE metrics which weight pixels with higher amounts of rain we can see that the ratio of MSE to BMSE
+is $26.08$ for U-Net and only $6$ for ConvLSTM. Interestingly U-Net suffers from a bias 
+in predicting low amounts of precipitation in both classification and regression.
+
+
+
+\begin{table*}[h]
+  \caption[short]{Metrics on Test Set for variants of classification models trained on 50 epochs.}
+  \begin{tabular}{@{}lllllll@{}}
+  \toprule
+  Models               & Accuracy & Precision & Recall & F1Score & Exact Match & Jaccard Index \\ \midrule
+  3D U-Net             & 0.9199   & 0.9199    & 0.9199 & 0.9199  & 0.0000      & 0.1150        \\
+  \textbf{ConvLSTM}    & \textbf{0.9999}   &  \textbf{0.9999}    & \textbf{0.9999} & \textbf{0.9999}  & \textbf{0.5385}      & \textbf{0.1249}        \\
+  ConvLSTM + Attention & 0.9300   & 0.9300    & 0.9300 & 0.9300  & 0.0000      & 0.1160 
+  \end{tabular}
+  \label{tab:class}
+\end{table*}
+
+\begin{table*}[h]
+  \caption[short]{Metrics on Test Set for variants of regression models trained on 50 epochs.}
+  \begin{tabular}{@{}lllllll@{}}
+  \toprule
+  Models                & MAE & MSE & RMSE & BMAE & BMSE \\ \midrule
+  3D U-Net              & 0.366  & 	0.351  & 0.565 & 	5.148  & 9.155 \\
+    \textbf{ConvLSTM}   & \textbf{0.032}   &  \textbf{0.001} & \textbf{0.034} & \textbf{0.055}  & \textbf{0.006}  \\
+  ConvLSTM + Attention  & 0.181   & 0.059 & 0.242 & 0.265  & 0.159  \\
+  \end{tabular}
+  \label{tab:reg}
+\end{table*}

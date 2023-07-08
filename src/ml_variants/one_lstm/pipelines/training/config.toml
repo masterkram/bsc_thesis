@@ -1,0 +1,35 @@
+[model]
+name = "Sat2Rad One LSTM :grinning_face_with_sweat:"
+batch_size = 2
+max_epochs = 100
+loss = 'mse'
+
+[model.splits]
+training = 0.8
+validation = 0.1
+testing = 0.1
+
+[model.input_size]
+height = 256
+width = 256
+channels = 11
+sequence_length = 5
+
+[model.output_size]
+height = 256
+width = 256
+channels = 1
+sequence_length = 1
+
+[model.encoder]
+kernel_size = [3,3]
+layers = 2
+filters = 128
+
+[mlflow]
+experiment_name = "sat2rad_simplified_convlstm"
+experiment_tracker = "Infoplaza MLFlow"
+
+[visualize]
+output_dir = '../../../../../logs/'
+color_map = 'Blues'

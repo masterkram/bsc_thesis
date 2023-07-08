@@ -1,6 +1,9 @@
 # Satellite to Radar Nowcasting ⛈️
 
-[![Python 3.11.1](https://img.shields.io/badge/python-3.11.1-brightgreen.svg)](#satellite-to-radar-nowcasting-⛈️)
+[![Python 3.10](https://badgers.space/badge/python/3.10/green?icon=https://cdn.simpleicons.org/python/white)](#satellite-to-radar-nowcasting-⛈️)
+[![Pytorch](https://badgers.space/badge/pytorch/2.0.1/orange?icon=https://cdn.simpleicons.org/pytorch/white)](https://github.com/psf/black)
+[![Code style: black](https://badgers.space/badge/code_style/black/black)](https://github.com/pytorch/pytorch)
+
 
 This repo contains source files for the bachelor thesis titled:
 
@@ -24,3 +27,28 @@ This repo contains source files for the bachelor thesis titled:
 │  └── main.tex
 └── sandbox
 ```
+
+## Installation
+
+```bash
+cd satellite-to-radar-nowcasting
+pip install -r requirements.txt
+```
+
+## Running
+
+```bash
+cp zenml.example.yaml zenml.yaml
+# customize zenml config file to your needs.
+zenml connect --config=zenml.yaml
+# set stack as needed here we will use infoplaza-local training
+zenml stack set infoplaza-local-training
+python ml_variants/mnist/pipelines/training/run_pipeline.py
+```
+
+
+## Experiments
+
+| Experiment Name | Experiment |  Trained Model |
+| --------------- | ---- | ------------- |
+|  `sat2rad_conv_lstm`  |  [view](https://mlflow.infoplaza.com/#/experiments/11?searchFilter=&orderByKey=attributes.start_time&orderByAsc=false&startTime=ALL&lifecycleFilter=Active&modelVersionFilter=All%20Runs&selectedColumns=attributes.%60Source%60,attributes.%60Models%60&isComparingRuns=false&compareRunCharts=dW5kZWZpbmVk)    |

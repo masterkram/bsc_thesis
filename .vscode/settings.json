@@ -1,0 +1,18 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+  "cSpell.words": [
+    "Conv",
+    "Convolutional",
+    "downsampling",
+    "grayscale",
+    "interpretability",
+    "LSTM",
+    "reproject",
+    "reprojecting",
+    "Reprojection",
+    "supercell"
+  ]
+}
